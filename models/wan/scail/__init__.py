@@ -155,7 +155,7 @@ class ScailPoseProcessor:
             return
         from preprocessing.matanyone.tools.base_segmenter import BaseSegmenter
 
-        # `BaseSegmenter` loads weights from `ckpts/mask/*safetensors` via `files_locator`.
+        # `BaseSegmenter` loads weights from `/kaggle/tmp/mask/*safetensors` via `files_locator`.
         self._sam_segmenter = BaseSegmenter(SAM_checkpoint=None, model_type="vit_h", device=f"cuda:{self.gpu_id}")
 
     def _ensure_matanyone_loaded(self) -> None:

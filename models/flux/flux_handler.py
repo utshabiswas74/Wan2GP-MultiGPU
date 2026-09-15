@@ -389,7 +389,7 @@ class family_handler():
         from .flux_main  import model_factory
 
         flux_model = model_factory(
-            checkpoint_dir="ckpts",
+            checkpoint_dir="/kaggle/tmp",
             model_filename=model_filename,
             model_type = model_type, 
             model_def = model_def,

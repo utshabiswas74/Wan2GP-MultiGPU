@@ -174,12 +174,12 @@ class LTXV:
         # with open("c:/temp/vae_config.json", "w", encoding="utf-8") as writer:
         #     writer.write(json.dumps(configs["vae"])) 
         # transformer = Transformer3DModel.from_pretrained(ckpt_path)
-        # offload.save_model(transformer, "ckpts/ltxv_0.9.8_13B_bf16.safetensors", config_file_path= "c:/temp/ltxv_config.json")
-        # offload.save_model(transformer, "ckpts/ltxv_0.9.8_13B_quanto_bf16_int8.safetensors", do_quantize= True, config_file_path= "c:/temp/ltxv_config.json")
+        # offload.save_model(transformer, "/kaggle/tmp/ltxv_0.9.8_13B_bf16.safetensors", config_file_path= "c:/temp/ltxv_config.json")
+        # offload.save_model(transformer, "/kaggle/tmp/ltxv_0.9.8_13B_quanto_bf16_int8.safetensors", do_quantize= True, config_file_path= "c:/temp/ltxv_config.json")
         
         # vae = CausalVideoAutoencoder.from_pretrained(ckpt_path)
         vae = offload.fast_load_transformers_model(fl.locate_file("ltxv_0.9.7_VAE.safetensors"), modelClass=CausalVideoAutoencoder, writable_tensors=False)
-        # vae = offload.fast_load_transformers_model("ckpts/ltxv_0.9.8_VAE.safetensors", modelClass=CausalVideoAutoencoder)
+        # vae = offload.fast_load_transformers_model("/kaggle/tmp/ltxv_0.9.8_VAE.safetensors", modelClass=CausalVideoAutoencoder)
         # if VAE_dtype == torch.float16:
         VAE_dtype = torch.bfloat16
 
@@ -189,8 +189,8 @@ class LTXV:
 
         # model_filepath = "c:/temp/ltxd/ltxv-13b-0.9.7-distilled.safetensors"
         transformer = offload.fast_load_transformers_model(model_filepath, modelClass=Transformer3DModel, writable_tensors=False)
-        # offload.save_model(transformer, "ckpts/ltxv_0.9.7_13B_distilled_bf16.safetensors", config_file_path= "c:/temp/ltxd/config.json")
-        # offload.save_model(transformer, "ckpts/ltxv_0.9.7_13B_distilled_quanto_bf16_int8.safetensors", do_quantize= True, config_file_path="c:/temp/ltxd/config.json")
+        # offload.save_model(transformer, "/kaggle/tmp/ltxv_0.9.7_13B_distilled_bf16.safetensors", config_file_path= "c:/temp/ltxd/config.json")
+        # offload.save_model(transformer, "/kaggle/tmp/ltxv_0.9.7_13B_distilled_quanto_bf16_int8.safetensors", do_quantize= True, config_file_path="c:/temp/ltxd/config.json")
         # transformer = offload.fast_load_transformers_model(model_filepath, modelClass=Transformer3DModel) 
         transformer._model_dtype = dtype
         if mixed_precision_transformer:
@@ -202,7 +202,7 @@ class LTXV:
         # offload.save_model(transformer, "ltx_13B_quanto_bf16_int8.safetensors", do_quantize= True, config_file_path="config_transformer.json")
 
         latent_upsampler = LatentUpsampler.from_pretrained(fl.locate_file("ltxv_0.9.7_spatial_upscaler.safetensors")).to("cpu").eval()
-        # latent_upsampler = LatentUpsampler.from_pretrained("ckpts/ltxv_0.9.8_spatial_upscaler.safetensors").to("cpu").eval()
+        # latent_upsampler = LatentUpsampler.from_pretrained("/kaggle/tmp/ltxv_0.9.8_spatial_upscaler.safetensors").to("cpu").eval()
         latent_upsampler.to(VAE_dtype)
         latent_upsampler._model_dtype = VAE_dtype
 

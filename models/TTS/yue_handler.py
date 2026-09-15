@@ -75,7 +75,7 @@ def _get_yue_download_def(model_def):
         "RepCodec",
         "descriptaudiocodec",
         "vocos",
-        "semantic_ckpts/hf_1_325000",
+        "semantic_/kaggle/tmp/hf_1_325000",
     ]
     xcodec_files = [
         ["config.yaml", "ckpt_00360000.pth"],

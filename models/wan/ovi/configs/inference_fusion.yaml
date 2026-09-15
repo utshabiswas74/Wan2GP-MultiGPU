@@ -1,4 +1,4 @@
-ckpt_dir: ./ckpts
+ckpt_dir: .//kaggle/tmp
 output_dir: ./outputs
 num_steps: 50
 solver_name: unipc

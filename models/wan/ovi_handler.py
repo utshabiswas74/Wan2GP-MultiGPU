@@ -107,7 +107,7 @@ class family_handler:
     ):
         from .ovi_fusion_engine import OviFusionEngine 
 
-        checkpoint_dir = "ckpts"
+        checkpoint_dir = "/kaggle/tmp"
 
         ovi_model = OviFusionEngine(
             config=None,

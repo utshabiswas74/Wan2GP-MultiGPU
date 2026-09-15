@@ -198,7 +198,7 @@ class FAcodecTrainer(CodecTrainer):
                     f"Resuming from checkpoint done in {(end - start) / 1e6:.2f}ms"
                 )
                 self.checkpoints_path = json.load(
-                    open(os.path.join(ckpt_path, "ckpts.json"), "r")
+                    open(os.path.join(ckpt_path, "/kaggle/tmp.json"), "r")
                 )
 
             if self.accelerator.is_main_process:
@@ -336,7 +336,7 @@ class FAcodecTrainer(CodecTrainer):
                 torch.save(state, save_path)
                 json.dump(
                     self.checkpoints_path,
-                    open(os.path.join(self.checkpoint_dir, "ckpts.json"), "w"),
+                    open(os.path.join(self.checkpoint_dir, "/kaggle/tmp.json"), "w"),
                     ensure_ascii=False,
                     indent=4,
                 )

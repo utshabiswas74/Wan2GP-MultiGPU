@@ -195,7 +195,7 @@ class family_handler:
         from .longcat_main import LongCatModel
 
         longcat_model = LongCatModel(
-            checkpoint_dir="ckpts",
+            checkpoint_dir="/kaggle/tmp",
             model_filename=model_filename,
             model_type=model_type,
             model_def=model_def,

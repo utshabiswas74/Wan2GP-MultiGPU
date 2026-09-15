@@ -57,7 +57,7 @@ def extract_vocal_and_background_stems(src_path: str, vocals_dst_path: str, back
         sep = Separator(
             output_dir=str(vocals_dst.parent),
             output_format=(vocals_dst.suffix.lstrip(".") or "wav"),
-            model_file_dir="ckpts/roformer/" #model_bs_roformer_ep_317_sdr_12.9755.ckpt"
+            model_file_dir="/kaggle/tmp/roformer/" #model_bs_roformer_ep_317_sdr_12.9755.ckpt"
         )
         sep.load_model()
         out_files = sep.separate(use_path, {"Vocals": vocals_dst.stem, "Instrumental": background_dst.stem})
@@ -97,7 +97,7 @@ def get_vocals(src_path: str, dst_path: str, min_seconds: float = 8) -> str:
             output_dir=str(dst.parent),
             output_format=(dst.suffix.lstrip(".") or "wav"),
             output_single_stem="Vocals",
-            model_file_dir="ckpts/roformer/" #model_bs_roformer_ep_317_sdr_12.9755.ckpt"
+            model_file_dir="/kaggle/tmp/roformer/" #model_bs_roformer_ep_317_sdr_12.9755.ckpt"
         )
         sep.load_model()
         out_files = sep.separate(use_path, {"Vocals": dst.stem})

@@ -162,7 +162,7 @@ class family_handler():
         from mmgp import offload
 
         pipe_processor = model_factory(
-            checkpoint_dir="ckpts",
+            checkpoint_dir="/kaggle/tmp",
             model_filename=model_filename,
             model_type = model_type, 
             model_def = model_def,

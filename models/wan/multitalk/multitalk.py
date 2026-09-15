@@ -225,7 +225,7 @@ def process_tts_multi(text, save_dir, voice1, voice2):
 
 def get_full_audio_embeddings(audio_guide1 = None, audio_guide2 = None, combination_type ="add", num_frames =  0, fps = 25, sr = 16000, padded_frames_for_embeddings = 0, min_audio_duration = 0, return_sum_only = False):
     wav2vec_feature_extractor, audio_encoder= custom_init('cpu', fl.locate_folder("chinese-wav2vec2-base"))
-    # wav2vec_feature_extractor, audio_encoder= custom_init('cpu', "ckpts/wav2vec")
+    # wav2vec_feature_extractor, audio_encoder= custom_init('cpu', "/kaggle/tmp/wav2vec")
     pad = int(padded_frames_for_embeddings/ fps * sr)
     new_human_speech1, new_human_speech2, sum_human_speechs, duration_changed = audio_prepare_multi(audio_guide1, audio_guide2, combination_type, duration= num_frames / fps, pad = pad, min_audio_duration = min_audio_duration )
     if return_sum_only:

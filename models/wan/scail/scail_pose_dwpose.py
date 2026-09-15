@@ -4,7 +4,7 @@ DWpose (YOLOX + RTMPose ONNX) wrapper from the official SCAIL-Pose repo.
 Upstream: https://github.com/zai-org/SCAIL-Pose (DWPoseProcess/dwpose/__init__.py)
 
 Minimal adaptations for WanGP:
-- Weights are resolved from `ckpts/pose` via `shared.utils.files_locator`.
+- Weights are resolved from `/kaggle/tmp/pose` via `shared.utils.files_locator`.
 - Removes the `controlnet_aux` dependency by inlining `HWC3`.
 - GPU-only ONNXRuntime providers (no CPU fallback).
 """

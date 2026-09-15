@@ -356,7 +356,7 @@ def _is_camera_npz(path):
 
 def _extract_zip(path):
     digest = hashlib.sha1(os.path.abspath(path).encode("utf-8")).hexdigest()[:12]
-    target = Path("ckpts") / "temp" / "vista4d_maps" / digest
+    target = Path("/kaggle/tmp") / "temp" / "vista4d_maps" / digest
     if target.is_dir():
         return target
     target.mkdir(parents=True, exist_ok=True)

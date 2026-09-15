@@ -34,7 +34,7 @@ except ImportError:
 
 # Step 3: Check available model files
 print("\n[3] Checking model files...")
-model_dir = os.path.join(REPO_ROOT, "ckpts")
+model_dir = os.path.join(REPO_ROOT, "/kaggle/tmp")
 if not os.path.exists(model_dir):
     print(f"    Model dir {model_dir} does not exist!")
     print("    Need to download Wan2.1 1.3B model weights first.")

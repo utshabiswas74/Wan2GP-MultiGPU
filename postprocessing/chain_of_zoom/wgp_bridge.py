@@ -21,7 +21,7 @@ class ChainOfZoomBridge(SimpleScaleSuffixMixin):
     uses_image_profile = True
     PARALLEL_TILE_PROCESSING_CHOICES = [("Auto", "auto"), ("2", 2), ("4", 4), ("8", 8)]
 
-    # all Chain-of-Zoom specific files live flat in a single folder (two-level ckpts layout);
+    # all Chain-of-Zoom specific files live flat in a single folder (two-level /kaggle/tmp layout);
     # the VLM config/processor/tokenizer files are the Qwen2.5-VL ones
     COZ_FOLDER = "chain_of_zoom"
     TRANSFORMER_FILENAME = "CoZ_sd3_medium_srlora_bf16.safetensors"

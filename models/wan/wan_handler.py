@@ -1124,7 +1124,7 @@ class family_handler():
         from . import WanAny2V
         wan_model = WanAny2V(
             config=cfg,
-            checkpoint_dir="ckpts",
+            checkpoint_dir="/kaggle/tmp",
             model_filename=model_filename,
             submodel_no_list = submodel_no_list,
             model_type = model_type,        

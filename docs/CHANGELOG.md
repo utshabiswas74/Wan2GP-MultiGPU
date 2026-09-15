@@ -774,7 +774,7 @@ pip install -r requirements.txt
 ```
 
 2) **Generic Method**
-a) move outside the installation WanGP folder the folders **ckpts**, **settings**, **outputs** and all the **loras** folders and the file **wgp_config.json**
+a) move outside the installation WanGP folder the folders **/kaggle/tmp**, **settings**, **outputs** and all the **loras** folders and the file **wgp_config.json**
 b) delete the WanGP folder and reinstall
 c) move back what you moved in a)
 

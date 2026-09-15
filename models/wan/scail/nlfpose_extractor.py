@@ -85,7 +85,7 @@ class NLFPoseExtractor:
         if self.nlfpose_model_path is None:
             print(
                 f"[SCAIL] Warning: NLFPose model '{self.NLFPOSE_MODEL}' not found; using 2D pose + heuristic depth. "
-                "Place it under `ckpts/pose/` or `ckpts/scail/` to enable true 3D lifting."
+                "Place it under `/kaggle/tmp/pose/` or `/kaggle/tmp/scail/` to enable true 3D lifting."
             )
 
         # Lazy load models
@@ -111,7 +111,7 @@ class NLFPoseExtractor:
 
         # Try direct paths
         for path in [
-            os.path.join("ckpts", self.NLFPOSE_MODEL),
+            os.path.join("/kaggle/tmp", self.NLFPOSE_MODEL),
             os.path.join("models", "pose", self.NLFPOSE_MODEL),
         ]:
             if os.path.exists(path):

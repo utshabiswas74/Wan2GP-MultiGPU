@@ -4,7 +4,7 @@ import os
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Iterable, List, Optional, Union
 
-default_checkpoints_paths = ["ckpts", "."]
+default_checkpoints_paths = ["/kaggle/tmp", "."]
 
 _checkpoints_paths = default_checkpoints_paths
 

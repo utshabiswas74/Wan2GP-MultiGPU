@@ -39,7 +39,7 @@ finetunes/
 outputs/
 outputs2/
 gradio_outputs/
-ckpts/
+/kaggle/tmp/
 loras/
 loras_i2v/
 tmp/

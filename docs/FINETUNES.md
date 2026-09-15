@@ -17,7 +17,7 @@ All the finetunes definitions files should be stored in the *finetunes/* subfold
 
 
 ## Create a new Finetune Model Definition Manually
-All the finetune models definitions are json files stored in the **finetunes/** sub folder. All the corresponding finetune model weights when they are downloaded will be stored in the *ckpts/* subfolder and will sit next to the base models.
+All the finetune models definitions are json files stored in the **finetunes/** sub folder. All the corresponding finetune model weights when they are downloaded will be stored in the */kaggle/tmp/* subfolder and will sit next to the base models.
 
 All the models used by WanGP are also described using the finetunes json format and can be found in the **defaults/** subfolder. Please don’t modify any file in the **defaults/** folder.
 
@@ -190,20 +190,20 @@ Example of **model** subtree
 ```
 
 ## Finetune Model Naming Convention
-If a model is not quantized, it is assumed to be mostly 16 bits (with maybe a few 32 bits weights), so *bf16* or *fp16* should appear somewhere in the name. If you need examples just look at the **ckpts** subfolder, the naming convention for the base models is the same.
+If a model is not quantized, it is assumed to be mostly 16 bits (with maybe a few 32 bits weights), so *bf16* or *fp16* should appear somewhere in the name. If you need examples just look at the **/kaggle/tmp** subfolder, the naming convention for the base models is the same.
 
 If a model is quantized the term *quanto* should also be included since WanGP supports for the moment only *quanto* quantized model, most specically you should replace *fp16* by *quanto_fp16_int8* or *bf6* by *quanto_bf16_int8*.
 
 Please note it is important than *bf16", "fp16* and *quanto* are all in lower cases letters.
 
 ## Creating a Quanto Quantized file
-If you launch the app with the *--save-quantized* switch, WanGP will create a quantized file in the **ckpts** subfolder just after the model has been loaded. Please note that the model will *bf16* or *fp16* quantized depending on what you chose in the configuration menu.
+If you launch the app with the *--save-quantized* switch, WanGP will create a quantized file in the **/kaggle/tmp** subfolder just after the model has been loaded. Please note that the model will *bf16* or *fp16* quantized depending on what you chose in the configuration menu.
 
 1) Make sure that in the finetune definition json file there is only a URL or filepath that points to the non quantized model
 2) Launch WanGP *python wgp.py --save-quantized*
 3) In the configuration menu *Transformer Data Type* property choose either *BF16* of *FP16*
-4) Launch a video generation (settings used do not matter). As soon as the model is loaded, a new quantized model will be created in the **ckpts** subfolder if it doesn't already exist.
-5) WanGP will update automatically the finetune definition file with the local path of the newly created quantized file (the list "URLs" will have an extra value such as *"ckpts/finetune_quanto_fp16_int8.safetensors"*
+4) Launch a video generation (settings used do not matter). As soon as the model is loaded, a new quantized model will be created in the **/kaggle/tmp** subfolder if it doesn't already exist.
+5) WanGP will update automatically the finetune definition file with the local path of the newly created quantized file (the list "URLs" will have an extra value such as *"/kaggle/tmp/finetune_quanto_fp16_int8.safetensors"*
 6) Remove *--save-quantized*, restart WanGP and select *Scaled Int8 Quantization* in the *Transformer Model Quantization* property
 7) Launch a new generation and verify in the terminal window that the right quantized model is loaded
 8) In order to share the finetune definition file you will need to store the fine model weights in the cloud. You can upload them for instance on *Huggingface*. You can now replace in the finetune definition file the local path by a URL (on Huggingface to get the URL of the model file click *Copy download link* when accessing the model properties)

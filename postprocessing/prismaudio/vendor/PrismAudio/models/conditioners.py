@@ -316,7 +316,7 @@ class CLIPConditioner(Conditioner):
         super().__init__(self.CLIP_MODEL_DIMS[clip_model_name], output_dim, project_out=project_out)
         
         self.enable_grad = enable_grad
-        model = AutoModel.from_pretrained(f"useful_ckpts/{clip_model_name}").train(enable_grad).requires_grad_(enable_grad).to(torch.float16)
+        model = AutoModel.from_pretrained(f"useful_/kaggle/tmp/{clip_model_name}").train(enable_grad).requires_grad_(enable_grad).to(torch.float16)
 
         
             
@@ -599,8 +599,8 @@ class T5Conditioner(Conditioner):
             try:
                 # self.tokenizer = T5Tokenizer.from_pretrained(t5_model_name, model_max_length = max_length)
                 # model = T5EncoderModel.from_pretrained(t5_model_name, max_length=max_length).train(enable_grad).requires_grad_(enable_grad)
-                self.tokenizer = AutoTokenizer.from_pretrained(os.path.join('useful_ckpts', t5_model_name))
-                model = T5EncoderModel.from_pretrained(os.path.join('useful_ckpts', t5_model_name)).train(enable_grad).requires_grad_(enable_grad).to(torch.float16)
+                self.tokenizer = AutoTokenizer.from_pretrained(os.path.join('useful_/kaggle/tmp', t5_model_name))
+                model = T5EncoderModel.from_pretrained(os.path.join('useful_/kaggle/tmp', t5_model_name)).train(enable_grad).requires_grad_(enable_grad).to(torch.float16)
             finally:
                 logging.disable(previous_level)
             
@@ -677,7 +677,7 @@ class CLIPTextConditioner(Conditioner):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             try:
-                model = create_model_from_pretrained('hf-hub:apple/DFN5B-CLIP-ViT-H-14-384',cache_dir='useful_ckpts/DFN5B-CLIP-ViT-H-14-384',
+                model = create_model_from_pretrained('hf-hub:apple/DFN5B-CLIP-ViT-H-14-384',cache_dir='useful_/kaggle/tmp/DFN5B-CLIP-ViT-H-14-384',
                                                            return_transform=False).train(enable_grad).requires_grad_(enable_grad).to(torch.float16)
                 model = patch_clip(model)
                 self.tokenizer = open_clip.get_tokenizer('ViT-H-14-378-quickgelu')  # same as 'ViT-H-14'
@@ -767,9 +767,9 @@ class MetaCLIPTextConditioner(Conditioner):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             try:
-                self.model = AutoModel.from_pretrained("useful_ckpts/metaclip-huge")
+                self.model = AutoModel.from_pretrained("useful_/kaggle/tmp/metaclip-huge")
                 self.model = patch_clip(self.model)
-                self.clip_processor = AutoProcessor.from_pretrained("useful_ckpts/metaclip-huge")
+                self.clip_processor = AutoProcessor.from_pretrained("useful_/kaggle/tmp/metaclip-huge")
             finally:
                 logging.disable(previous_level)
 

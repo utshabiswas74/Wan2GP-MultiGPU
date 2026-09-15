@@ -280,7 +280,7 @@ class family_handler:
         from .kandinsky_main import model_factory
 
         kandinsky = model_factory(
-            checkpoint_dir="ckpts",
+            checkpoint_dir="/kaggle/tmp",
             model_filename=model_filename,
             model_type=model_type,
             model_def=model_def,

@@ -344,13 +344,13 @@ class Inference(object):
                 vae_configpath =  fl.locate_file("hunyuan_video_custom_VAE_config.json")
                 vae_filepath = fl.locate_file("hunyuan_video_custom_VAE_fp32.safetensors")
             # elif avatar:
-            #     vae_configpath = "ckpts/config_vae_avatar.json"
-            #     vae_filepath = "ckpts/vae_avatar.pt"
+            #     vae_configpath = "/kaggle/tmp/config_vae_avatar.json"
+            #     vae_filepath = "/kaggle/tmp/vae_avatar.pt"
             else:
                 vae_configpath = fl.locate_file("hunyuan_video_VAE_config.json")
                 vae_filepath =  fl.locate_file("hunyuan_video_VAE_fp32.safetensors")
 
-        # config = AutoencoderKLCausal3D.load_config("ckpts/hunyuan_video_VAE_config.json")
+        # config = AutoencoderKLCausal3D.load_config("/kaggle/tmp/hunyuan_video_VAE_config.json")
         # config = AutoencoderKLCausal3D.load_config("c:/temp/hvae/config_vae.json")
 
             vae, _, s_ratio, t_ratio = load_vae( "884-16c-hy", vae_path= vae_filepath, vae_config_path= vae_configpath, vae_precision= vae_precision, device= "cpu", )

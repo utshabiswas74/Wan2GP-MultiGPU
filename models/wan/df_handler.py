@@ -104,7 +104,7 @@ class family_handler():
         from . import DTT2V
         wan_model = DTT2V(
             config=cfg,
-            checkpoint_dir="ckpts",
+            checkpoint_dir="/kaggle/tmp",
             model_filename=model_filename,
             model_type = model_type,        
             model_def = model_def,

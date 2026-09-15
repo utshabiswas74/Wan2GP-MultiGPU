@@ -540,11 +540,11 @@ if __name__ == "__main__":
     
     # Load original and fine-tuned models from safetensors files
     
-    original_state_dict = load_safetensors("ckpts/hunyuan_video_1.5_i2v_480_bf16.safetensors")
-    finetuned_state_dict = load_safetensors("ckpts/hunyuan_video_1.5_i2v_480_step_distilled_bf16.safetensors")
+    original_state_dict = load_safetensors("/kaggle/tmp/hunyuan_video_1.5_i2v_480_bf16.safetensors")
+    finetuned_state_dict = load_safetensors("/kaggle/tmp/hunyuan_video_1.5_i2v_480_step_distilled_bf16.safetensors")
 
-    # original_state_dict = load_safetensors("ckpts/flux1-dev_bf16.safetensors")
-    # finetuned_state_dict = load_safetensors("ckpts/flux1-schnell_bf16.safetensors")
+    # original_state_dict = load_safetensors("/kaggle/tmp/flux1-dev_bf16.safetensors")
+    # finetuned_state_dict = load_safetensors("/kaggle/tmp/flux1-schnell_bf16.safetensors")
 
     print(f"Loaded original model with {len(original_state_dict)} parameters")
     print(f"Loaded fine-tuned model with {len(finetuned_state_dict)} parameters")

@@ -298,7 +298,7 @@ configs = {
     "flux2-dev": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux2_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux2_vae.safetensors",
         params=FluxParams(
             in_channels=128,
             out_channels=128,
@@ -334,7 +334,7 @@ configs = {
     "flux2-klein-4b": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux2_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux2_vae.safetensors",
         params=FluxParams(
             in_channels=128,
             out_channels=128,
@@ -370,7 +370,7 @@ configs = {
     "flux2-klein-9b": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux2_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux2_vae.safetensors",
         params=FluxParams(
             in_channels=128,
             out_channels=128,
@@ -406,7 +406,7 @@ configs = {
     "pi-flux2": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux2_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux2_vae.safetensors",
         params=FluxParams(
             in_channels=128,
             out_channels=128,
@@ -443,7 +443,7 @@ configs = {
     "flux-dev": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,
@@ -474,7 +474,7 @@ configs = {
     "flux-schnell": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-schnell",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,
@@ -505,7 +505,7 @@ configs = {
     "flux-chroma": ModelSpec(
         repo_id="lodestones/Chroma1-HD",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,
@@ -537,7 +537,7 @@ configs = {
     "flux-chroma-radiance": ModelSpec(
         repo_id="lodestones/Chroma1-Radiance",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=3,
@@ -577,7 +577,7 @@ configs = {
     "flux-dev-canny": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-Canny-dev",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=128,
             out_channels=64,
@@ -608,7 +608,7 @@ configs = {
     "flux-dev-canny-lora": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-dev",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         lora_repo_id="black-forest-labs/FLUX.1-Canny-dev-lora",
         lora_filename="flux1-canny-dev-lora.safetensors",
         params=FluxParams(
@@ -641,7 +641,7 @@ configs = {
     "flux-dev-depth": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-Depth-dev",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=128,
             out_channels=64,
@@ -672,7 +672,7 @@ configs = {
     "flux-dev-depth-lora": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-dev",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         lora_repo_id="black-forest-labs/FLUX.1-Depth-dev-lora",
         lora_filename="flux1-depth-dev-lora.safetensors",
         params=FluxParams(
@@ -705,7 +705,7 @@ configs = {
     "flux-dev-redux": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-Redux-dev",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,
@@ -736,7 +736,7 @@ configs = {
     "flux-dev-fill": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-Fill-dev",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=384,
             out_channels=64,
@@ -767,7 +767,7 @@ configs = {
     "flux-dev-kontext": ModelSpec(
         repo_id="black-forest-labs/FLUX.1-Kontext-dev",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,
@@ -798,7 +798,7 @@ configs = {
     "flux-dev-uso": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,
@@ -830,7 +830,7 @@ configs = {
     "flux-dev-umo": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,
@@ -862,7 +862,7 @@ configs = {
     "flux-dev-kontext-dreamomni2": ModelSpec(
         repo_id="",
         repo_flow="",
-        repo_ae="ckpts/flux_vae.safetensors",
+        repo_ae="/kaggle/tmp/flux_vae.safetensors",
         params=FluxParams(
             in_channels=64,
             out_channels=64,

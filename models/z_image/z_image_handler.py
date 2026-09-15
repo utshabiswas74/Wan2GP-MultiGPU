@@ -139,7 +139,7 @@ class family_handler:
         is_control = base_model_type in ["z_image_control", "z_image_control2", "z_image_control2_1"]
 
         pipe_processor = model_factory(
-            checkpoint_dir="ckpts",
+            checkpoint_dir="/kaggle/tmp",
             model_filename=model_filename,
             model_type=model_type,
             model_def=model_def,

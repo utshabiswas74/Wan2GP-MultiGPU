@@ -29,7 +29,7 @@ def load_vae(vae_type: str="884-16c-hy",
     if logger is not None:
         logger.info(f"Loading 3D VAE model ({vae_type}) from: {vae_path}")
 
-    # config = AutoencoderKLCausal3D.load_config("ckpts/hunyuan_video_VAE_config.json")
+    # config = AutoencoderKLCausal3D.load_config("/kaggle/tmp/hunyuan_video_VAE_config.json")
     # config = AutoencoderKLCausal3D.load_config("c:/temp/hvae/config_vae.json")
     config = AutoencoderKLCausal3D.load_config(vae_config_path)
     if sample_size:
@@ -38,7 +38,7 @@ def load_vae(vae_type: str="884-16c-hy",
         vae = AutoencoderKLCausal3D.from_config(config)
 
     vae_ckpt = Path(vae_path) 
-    # vae_ckpt = Path("ckpts/hunyuan_video_VAE.pt") 
+    # vae_ckpt = Path("/kaggle/tmp/hunyuan_video_VAE.pt") 
     # vae_ckpt = Path("c:/temp/hvae/pytorch_model.pt")
     assert vae_ckpt.exists(), f"VAE checkpoint not found: {vae_ckpt}"
     
