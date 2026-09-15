@@ -222,24 +222,6 @@ class WanAny2V:
 
             else:
                 self.model = offload.fast_load_transformers_model(model_filename,  **kwargs)
-
-                # --- Multi-GPU Setup Start ---
-                from accelerate import dispatch_model, infer_auto_device_map
-                print("⚡ Splitting Wan 14B model across Dual GPUs...")
-                
-                device_map = infer_auto_device_map(
-                    self.model,
-                    max_memory={0: "14GiB", 1: "14GiB", "cpu": "8GiB"}, 
-                    no_split_module_classes=["WanAttentionBlock"]
-                )
-                
-                self.model = dispatch_model(
-                    self.model,
-                    device_map=device_map,
-                    main_device="cuda:0"
-                )
-                print("✅ Model successfully dispatched!")
-                # --- Multi-GPU Setup End ---
         
 
         if module_source is not None:
