@@ -117,7 +117,6 @@ MULTIPLIER_SEPARATOR = "*"
 
 spatial_upsampler_handlers = [
     "postprocessing.lanczos.wgp_bridge.LanczosUpsampler",
-    "postprocessing.dlss5.spatial_upsampler.DLSS5SpatialUpsampler",
     "postprocessing.flashvsr.wgp_bridge.FlashVSRBridge",
     "postprocessing.seedvr2.wgp_bridge.SeedVR2Bridge",
     "postprocessing.pid.wgp_bridge.PiDBridge",
