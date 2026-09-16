@@ -9,11 +9,12 @@
             "https://huggingface.co/DeepBeepMeep/Wan2.1/resolve/main/scail2_14B_quanto_mfp16_int8.safetensors"
         ]
     },
-    "prompt": "The character is dancing naturally with expressive body movement and expression, large milks",
+    "prompt": "The character is dancing naturally with expressive body movement and expression",
     "negative_prompt": "",
-    "video_length": 81,
-    "resolution": "832x480",
+    "video_length": 148,
+    "resolution": "320x576",
     "num_inference_steps": 40,
+    "force_fps": "15",
     "flow_shift": 3,
     "guidance_scale": 5.0,
     "custom_settings": {
