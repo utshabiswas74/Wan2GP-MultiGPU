@@ -8,7 +8,7 @@
             "https://huggingface.co/DeepBeepMeep/TTS/resolve/main/qwen3_tts_12hz_1b7_base_quanto_bf16_int8.safetensors"
         ]
     },
-    "prompt": "I checked the schedule twice, and everything lines up.",
+    "prompt": "I checked the schedule twice, and everything lines up",
     "alt_prompt": "",
     "multi_prompts_gen_type": "FG",
     "duration_seconds": 30
