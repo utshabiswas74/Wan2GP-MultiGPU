@@ -3218,7 +3218,7 @@ def get_factory_settings(model_type):
     ui_defaults.update({
         "settings_version": settings_version,
         "prompt": get_default_prompt(i2v),
-        "resolution": "1280x720" if "720" in base_model_type else "832x480",
+        "resolution": "1280x720" if "720" in base_model_type else "320x576",
         "flow_shift": 7.0 if "720" not in base_model_type and i2v else 5.0,
     })
     get_model_handler(model_type).update_default_settings(base_model_type, model_def, ui_defaults)
