@@ -433,7 +433,7 @@ def late_remux_refresh_updates(method):
 
 def create_generation_audio_ui(gr, ui_get, ui_defaults, *, any_control_video: bool = False, update_form: bool = False):
     postprocess_choices = soundtrack_choices(include_none=True, include_control=any_control_video)
-    postprocess_value = _choice_value(postprocess_choices, ui_get("postprocess_audio"), "")
+    postprocess_value = _choice_value(postprocess_choices, ui_get("postprocess_audio"), CONTROL_AUDIO_METHOD)
     postprocess_metadata = method_metadata(postprocess_value)
     postprocess_audio = gr.Dropdown(choices=postprocess_choices, value=postprocess_value, visible=True, scale=1, label="Postprocess Remux Audio")
     with gr.Column(visible=postprocess_metadata["needs_prompt"] or postprocess_metadata["needs_negative_prompt"]) as postprocess_audio_prompt_col:
