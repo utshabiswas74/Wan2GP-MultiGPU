@@ -66,7 +66,7 @@
 	"spatial_upsampler_face_count": 1,
 	"film_grain_intensity": 0,
 	"film_grain_saturation": 0.5,
-	"postprocess_audio": "",
+	"postprocess_audio": "control",
 	"postprocess_audio_prompt": "",
 	"postprocess_audio_neg_prompt": "",
 	"perturbation_switch": 0,
