@@ -961,11 +961,6 @@ class ViT(nn.Module):
             x = tensor_list
             mask = None
 
-        if torch.is_tensor(x) and x.is_floating_point():
-            target_dtype = self.patch_embed.proj.weight.dtype
-            if x.dtype != target_dtype:
-                x = x.to(dtype=target_dtype)
-
         x = self.patch_embed(x)
         h, w = x.shape[1], x.shape[2]
 

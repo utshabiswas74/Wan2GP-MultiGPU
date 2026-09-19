@@ -38,12 +38,6 @@ class Sam3Processor:
             input_points_mask=None,
         )
 
-    def _image_dtype(self):
-        for parameter in self.model.backbone.parameters():
-            if parameter.is_floating_point():
-                return parameter.dtype
-        return torch.float32
-
     @torch.inference_mode()
     def set_image(self, image, state=None):
         """Sets the image on which we want to do predictions."""
@@ -58,7 +52,7 @@ class Sam3Processor:
             raise ValueError("Image must be a PIL image or a tensor")
 
         image = v2.functional.to_image(image).to(self.device)
-        image = self.transform(image).unsqueeze(0).to(dtype=self._image_dtype())
+        image = self.transform(image).unsqueeze(0)
 
         state["original_height"] = height
         state["original_width"] = width
@@ -95,7 +89,7 @@ class Sam3Processor:
         state["original_widths"] = [image.width for image in images]
 
         images = [
-            self.transform(v2.functional.to_image(image).to(self.device)).to(dtype=self._image_dtype())
+            self.transform(v2.functional.to_image(image).to(self.device))
             for image in images
         ]
         images = torch.stack(images, dim=0)

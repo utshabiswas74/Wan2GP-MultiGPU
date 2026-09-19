@@ -104,8 +104,7 @@ class WanAny2V:
         mixed_precision_transformer = False,
         VAE_upsampling = None,
     ):
-        self.manual_pipeline_parallel = os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL", "0") == "1"
-        self.device = torch.device("cpu") if self.manual_pipeline_parallel else torch.device("cuda")
+        self.device = torch.device(f"cuda")
         self.config = config
         self.VAE_dtype = VAE_dtype
         self.dtype = dtype
@@ -128,7 +127,7 @@ class WanAny2V:
         if hasattr(config, "clip_checkpoint") and not model_def.get("i2v_2_2", False) or base_model_type in ["animate"]:
             self.clip = CLIPModel(
                 dtype=config.clip_dtype,
-                device=torch.device("cpu"),
+                device=self.device,
                 checkpoint_path=fl.locate_file(config.clip_checkpoint),
                 tokenizer_path=fl.locate_folder("xlm-roberta-large"))
 
@@ -163,11 +162,11 @@ class WanAny2V:
         
         self.vae = vae( vae_pth=fl.locate_file(vae_checkpoint), dtype= VAE_dtype, upsampler_factor = vae_upsampler_factor, device="cpu")
         self.vae.upsampling_set = VAE_upsampling
-        self.vae.device = torch.device("cpu")
+        self.vae.device = self.device # need to set to cuda so that vae buffers are properly moved (although the rest will stay in the CPU)
         self.vae2 = None
         if vae_checkpoint2 is not None:
             self.vae2 = vae( vae_pth=fl.locate_file(vae_checkpoint2), dtype= VAE_dtype, device="cpu")
-            self.vae2.device = torch.device("cpu")
+            self.vae2.device = self.device
         
         # config_filename= "configs/t2v_1.3B.json"
         # import json
@@ -248,18 +247,6 @@ class WanAny2V:
 
         self.model.apply_post_init_changes()
         if self.model2 is not None: self.model2.apply_post_init_changes()
-
-        if self.manual_pipeline_parallel:
-            self.model.configure_manual_pipeline_parallelism("cuda:0", "cuda:1")
-            if self.model2 is not None:
-                self.model2.configure_manual_pipeline_parallelism("cuda:0", "cuda:1")
-            if self.text_encoder is not None:
-                self.text_encoder.model.to("cpu")
-            self.vae.model.to("cpu")
-            if self.vae2 is not None:
-                self.vae2.model.to("cpu")
-            if hasattr(self, "clip"):
-                self.clip.model.to("cpu")
         
         self.kiwi_mllm = None
         self.kiwi_source_embedder_file = None
@@ -615,9 +602,7 @@ class WanAny2V:
         # context_NAG = torch.cat([context_NAG, context_NAG.new_zeros(text_len -context_NAG.size(0), context_NAG.size(1)) ]).unsqueeze(0) 
         
         from mmgp import offload
-        runtime_offloadobj = getattr(__import__("wgp"), "offloadobj", None)
-        if runtime_offloadobj is not None:
-            runtime_offloadobj.unload_all()
+        offloadobj.unload_all()
 
         offload.shared_state.update({"_nag_scale" : NAG_scale, "_nag_tau" : NAG_tau, "_nag_alpha":  NAG_alpha })
         if NAG_scale > 1: context = torch.cat([context, context_null], dim=0)

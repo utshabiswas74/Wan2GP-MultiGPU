@@ -40,20 +40,19 @@ class Sam3VideoPredictor(Sam3BasePredictor):
         self.video_loader_type = video_loader_type
         from ..model_builder import build_sam3_video_model
 
-        model = build_sam3_video_model(
-            checkpoint_path=checkpoint_path,
-            bpe_path=bpe_path,
-            has_presence_token=has_presence_token,
-            geo_encoder_use_img_cross_attn=geo_encoder_use_img_cross_attn,
-            strict_state_dict_loading=strict_state_dict_loading,
-            apply_temporal_disambiguation=apply_temporal_disambiguation,
-            compile=compile,
+        self.model = (
+            build_sam3_video_model(
+                checkpoint_path=checkpoint_path,
+                bpe_path=bpe_path,
+                has_presence_token=has_presence_token,
+                geo_encoder_use_img_cross_attn=geo_encoder_use_img_cross_attn,
+                strict_state_dict_loading=strict_state_dict_loading,
+                apply_temporal_disambiguation=apply_temporal_disambiguation,
+                compile=compile,
+            )
+            .cuda()
+            .eval()
         )
-        if os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL") == "1":
-            self.model = model.to(device="cpu", dtype=torch.float32).eval()
-            self.install_cpu_float32_hook()
-        else:
-            self.model = model.cuda().eval()
 
     def remove_object(
         self,

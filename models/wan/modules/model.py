@@ -1327,33 +1327,6 @@ class WanModel(ModelMixin, ConfigMixin):
         if hasattr(self, "vace_blocks"): self.adapt_vace_model()
         if hasattr(self, "face_adapter"): self.adapt_animate_model()
 
-    @staticmethod
-    def _move_pipeline_value(value, device):
-        if torch.is_tensor(value):
-            return value.to(device)
-        if isinstance(value, list):
-            return [WanModel._move_pipeline_value(item, device) for item in value]
-        if isinstance(value, tuple):
-            return tuple(WanModel._move_pipeline_value(item, device) for item in value)
-        if isinstance(value, dict):
-            return {key: WanModel._move_pipeline_value(item, device) for key, item in value.items()}
-        return value
-
-    def configure_manual_pipeline_parallelism(self, first_device="cuda:0", second_device="cuda:1"):
-        if not torch.cuda.is_available() or torch.cuda.device_count() < 2:
-            raise RuntimeError("Manual Wan pipeline parallelism requires at least two CUDA devices.")
-        if self.num_layers != 40 or len(self.blocks) != 40:
-            raise RuntimeError(f"Manual Wan pipeline parallelism expects 40 blocks, found {self.num_layers}.")
-
-        self.pipeline_devices = (torch.device(first_device), torch.device(second_device))
-        first_device, second_device = self.pipeline_devices
-        for module in (self.patch_embedding, self.text_embedding, self.time_embedding, self.time_projection):
-            module.to(first_device)
-        self.blocks[:20].to(first_device)
-        self.blocks[20:40].to(second_device)
-        self.head.to(second_device)
-        self._manual_pipeline_parallel = True
-
     def lock_layers_dtypes(self, hybrid_dtype = None, dtype = torch.float32):
         layer_list = [self.head, self.head.head, self.head.modulation, self.patch_embedding]
         if self.scail or self.scail2:
@@ -1568,46 +1541,12 @@ class WanModel(ModelMixin, ConfigMixin):
         animate2_log_scale = 0.0,
         animate2_kv_cache = "Disabled",
     ):
-        manual_pipeline_parallel = getattr(self, "_manual_pipeline_parallel", False)
         # patch_dtype =  self.patch_embedding.weight.dtype
         modulation_dtype = self.time_projection[1].weight.dtype
         if self.model_type == 'i2v':
             assert clip_fea is not None and y is not None
         # params
         device = self.patch_embedding.weight.device
-        if manual_pipeline_parallel:
-            x = self._move_pipeline_value(x, device)
-            t = self._move_pipeline_value(t, device)
-            context = self._move_pipeline_value(context, device)
-            vace_context = self._move_pipeline_value(vace_context, device)
-            clip_fea = self._move_pipeline_value(clip_fea, device)
-            y = self._move_pipeline_value(y, device)
-            cam_emb = self._move_pipeline_value(cam_emb, device)
-            audio_proj = self._move_pipeline_value(audio_proj, device)
-            multitalk_audio = self._move_pipeline_value(multitalk_audio, device)
-            multitalk_masks = self._move_pipeline_value(multitalk_masks, device)
-            pose_latents = self._move_pipeline_value(pose_latents, device)
-            face_pixel_values = self._move_pipeline_value(face_pixel_values, device)
-            lynx_ip_embeds = self._move_pipeline_value(lynx_ip_embeds, device)
-            lynx_ref_buffer = self._move_pipeline_value(lynx_ref_buffer, device)
-            steadydancer_condition = self._move_pipeline_value(steadydancer_condition, device)
-            steadydancer_ref_x = self._move_pipeline_value(steadydancer_ref_x, device)
-            steadydancer_ref_c = self._move_pipeline_value(steadydancer_ref_c, device)
-            steadydancer_clip_fea_c = self._move_pipeline_value(steadydancer_clip_fea_c, device)
-            scail_pose_latents = self._move_pipeline_value(scail_pose_latents, device)
-            scail2_ref_latents = self._move_pipeline_value(scail2_ref_latents, device)
-            scail2_pose_latents = self._move_pipeline_value(scail2_pose_latents, device)
-            scail2_driving_masks = self._move_pipeline_value(scail2_driving_masks, device)
-            scail2_ref_masks = self._move_pipeline_value(scail2_ref_masks, device)
-            kiwi_source_condition = self._move_pipeline_value(kiwi_source_condition, device)
-            kiwi_ref_condition = self._move_pipeline_value(kiwi_ref_condition, device)
-            bernini_sources = self._move_pipeline_value(bernini_sources, device)
-            vista = self._move_pipeline_value(vista, device)
-            animate2_ref_x = self._move_pipeline_value(animate2_ref_x, device)
-            animate2_ref_y = self._move_pipeline_value(animate2_ref_y, device)
-            animate2_ref_context = self._move_pipeline_value(animate2_ref_context, device)
-            animate2_ref_clip_fea = self._move_pipeline_value(animate2_ref_clip_fea, device)
-            animate2_ref_freqs = self._move_pipeline_value(animate2_ref_freqs, device)
         if torch.is_tensor(freqs) and freqs.device != device:
             freqs = freqs.to(device)
 
@@ -2058,29 +1997,6 @@ class WanModel(ModelMixin, ConfigMixin):
                 if pipeline._interrupt:
                     return [None] * len(x_list)
 
-                if block_idx == 20 and getattr(self, "_manual_pipeline_parallel", False):
-                    second_device = self.pipeline_devices[1]
-                    x_list = self._move_pipeline_value(x_list, second_device)
-                    context_list = self._move_pipeline_value(context_list, second_device)
-                    hints_list = self._move_pipeline_value(hints_list, second_device)
-                    audio_scale_list = self._move_pipeline_value(audio_scale_list, second_device)
-                    multitalk_audio_list = self._move_pipeline_value(multitalk_audio_list, second_device)
-                    multitalk_masks_list = self._move_pipeline_value(multitalk_masks_list, second_device)
-                    motion_vec_list = self._move_pipeline_value(motion_vec_list, second_device)
-                    lynx_ip_embeds_list = self._move_pipeline_value(lynx_ip_embeds_list, second_device)
-                    lynx_ref_buffer_list = self._move_pipeline_value(lynx_ref_buffer_list, second_device)
-                    e = self._move_pipeline_value(e, second_device)
-                    e0 = self._move_pipeline_value(e0, second_device)
-                    freqs = self._move_pipeline_value(freqs, second_device)
-                    standin_freqs = self._move_pipeline_value(standin_freqs, second_device)
-                    kwargs = self._move_pipeline_value(kwargs, second_device)
-                    standin_x = self._move_pipeline_value(standin_x, second_device)
-                    standin_e0 = self._move_pipeline_value(standin_e0, second_device)
-                    animate2_ref_hidden = self._move_pipeline_value(animate2_ref_hidden, second_device)
-                    animate2_ref_context_emb = self._move_pipeline_value(animate2_ref_context_emb, second_device)
-                    animate2_ref_e0 = self._move_pipeline_value(animate2_ref_e0, second_device)
-                    animate2_ref_freqs = self._move_pipeline_value(animate2_ref_freqs, second_device)
-
                 if standin_x is not None:
                     if not standin_cache_enabled: get_cache("standin").clear()
                     standin_x = block(standin_x, context = None, grid_sizes = None, e= standin_e0, freqs = standin_freqs, standin_phase = 1)
@@ -2177,7 +2093,7 @@ class WanModel(ModelMixin, ConfigMixin):
         for index in range(len(x_list)):
             x = x_list[index]
             x_list[index] = None
-            outputs.append(x.float().to("cpu") if manual_pipeline_parallel else x.float())
+            outputs.append(x.float())
             x = None
         return outputs
 

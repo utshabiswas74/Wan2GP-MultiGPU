@@ -17,7 +17,7 @@ _PACKAGE_ROOT = Path(__file__).resolve().parent
 _SAM3_FOLDER = "sam3"
 _SAM3_CHECKPOINT_NAME = "sam3.1_multiplex_bf16.safetensors"
 _SAM3_BPE_NAME = "bpe_simple_vocab_16e6.txt.gz"
-KEEP_VIDEO_FRAMES_ON_CUDA = os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL") != "1"
+KEEP_VIDEO_FRAMES_ON_CUDA = True
 _TEXT_ENCODER_CACHE = None
 _TEXT_ENCODER_CACHE_KEY = None
 DEFAULT_INSTANCE_PALETTE_RGB = np.array([
@@ -81,16 +81,15 @@ def _autocast_context():
     return accelerator_autocast()
 
 
-def _prompt_payload(value):
-    target_dtype = torch.float32 if get_accelerator_device().type == "cpu" else torch.bfloat16
+def _bf16_prompt_payload(value):
     if torch.is_tensor(value):
-        return value.to(dtype=target_dtype) if value.is_floating_point() and value.dtype != target_dtype else value
+        return value.to(dtype=torch.bfloat16) if value.is_floating_point() else value
     if isinstance(value, dict):
-        return {key: _prompt_payload(item) for key, item in value.items()}
+        return {key: _bf16_prompt_payload(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [_prompt_payload(item) for item in value]
+        return [_bf16_prompt_payload(item) for item in value]
     if isinstance(value, tuple):
-        return tuple(_prompt_payload(item) for item in value)
+        return tuple(_bf16_prompt_payload(item) for item in value)
     return value
 
 
@@ -164,8 +163,6 @@ def _encode_text_outputs(text_encoder, captions: list[str], device: torch.device
     masks, memories, embeds = [], [], []
     if is_accelerator_device(device):
         text_encoder.to(device=device, dtype=torch.bfloat16)
-    else:
-        text_encoder.to(device="cpu", dtype=torch.float32)
     for caption in captions:
         with torch.inference_mode(), _autocast_context():
             text_attention_mask, text_memory, text_embeds = text_encoder([caption], device=device)
@@ -192,8 +189,6 @@ def _encode_keyword_prompts(model_builder, checkpoint_path: str, bpe_path: str, 
             text_encoder = _TEXT_ENCODER_CACHE
         else:
             text_encoder = model_builder.build_sam3_text_encoder(checkpoint_path=checkpoint_path, bpe_path=bpe_path)
-            if device.type == "cpu":
-                text_encoder.to(device="cpu", dtype=torch.float32)
             if keep_text_encoder_loaded:
                 _TEXT_ENCODER_CACHE = text_encoder
                 _TEXT_ENCODER_CACHE_KEY = cache_key
@@ -360,7 +355,7 @@ def run_sam3_video(
             logger.info("SAM3 keyword currently being processed: '%s'", keyword)
             request = {"type": "add_prompt", "session_id": session_id, "frame_index": 0, "text": keyword}
             if preencoded_prompts is not None:
-                request["preencoded_text_outputs"] = _prompt_payload(preencoded_prompts[keyword])
+                request["preencoded_text_outputs"] = _bf16_prompt_payload(preencoded_prompts[keyword])
             with _autocast_context():
                 result = video_predictor.handle_request(request)
                 merge_outputs(0, result.get("outputs") if isinstance(result, dict) else None)
