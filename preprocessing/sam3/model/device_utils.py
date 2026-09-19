@@ -4,6 +4,26 @@ import os
 import torch
 
 
+def first_floating_parameter_dtype(model, default=torch.float32):
+    if isinstance(model, torch.nn.Module):
+        for parameter in model.parameters():
+            if parameter.is_floating_point():
+                return parameter.dtype
+    return default
+
+
+def cast_floating_tensors(value, dtype):
+    if torch.is_tensor(value):
+        return value.to(dtype=dtype) if value.is_floating_point() and value.dtype != dtype else value
+    if isinstance(value, dict):
+        return {key: cast_floating_tensors(item, dtype) for key, item in value.items()}
+    if isinstance(value, list):
+        return [cast_floating_tensors(item, dtype) for item in value]
+    if isinstance(value, tuple):
+        return tuple(cast_floating_tensors(item, dtype) for item in value)
+    return value
+
+
 def mps_is_available() -> bool:
     return hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
 

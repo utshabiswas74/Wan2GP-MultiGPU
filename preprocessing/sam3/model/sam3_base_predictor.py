@@ -16,7 +16,12 @@ from typing import Dict, List, Optional
 
 import torch
 from ..logger import get_logger
-from ..model.device_utils import accelerator_autocast, empty_accelerator_cache
+from ..model.device_utils import (
+    accelerator_autocast,
+    cast_floating_tensors,
+    empty_accelerator_cache,
+    first_floating_parameter_dtype,
+)
 
 logger = get_logger(__name__)
 
@@ -39,6 +44,10 @@ class Sam3BasePredictor:
     @staticmethod
     def _bf16_autocast():
         return accelerator_autocast()
+
+    def _cast_model_inputs(self, value):
+        dtype = first_floating_parameter_dtype(self.model, default=torch.bfloat16)
+        return cast_floating_tensors(value, dtype)
 
     # ── Request dispatch ──────────────────────────────────────────────
 
@@ -205,6 +214,7 @@ class Sam3BasePredictor:
         sig = inspect.signature(self.model.add_prompt)
         valid_params = set(sig.parameters.keys())
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
+        filtered_kwargs = self._cast_model_inputs(filtered_kwargs)
 
         with self._bf16_autocast():
             frame_idx, outputs = self.model.add_prompt(**filtered_kwargs)
@@ -290,6 +300,7 @@ class Sam3BasePredictor:
             for k, v in kwargs.items():
                 if k in sig.parameters:
                     propagate_kwargs[k] = v
+            propagate_kwargs = self._cast_model_inputs(propagate_kwargs)
 
             # Forward propagation
             with self._bf16_autocast():
