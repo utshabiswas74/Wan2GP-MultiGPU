@@ -111,6 +111,7 @@ class WanAny2V:
         self.num_train_timesteps = config.num_train_timesteps
         self.param_dtype = config.param_dtype
         self.model_def = model_def
+        self.manual_pipeline_parallel = os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL", "0") == "1"
         self.model2 = None
         self.transformer_switch = model_def.get("URLs2", None) is not None
         self.is_mocha = model_def.get("mocha_mode", False)
@@ -247,6 +248,17 @@ class WanAny2V:
 
         self.model.apply_post_init_changes()
         if self.model2 is not None: self.model2.apply_post_init_changes()
+
+        if self.manual_pipeline_parallel:
+            self.model.configure_manual_pipeline_parallelism("cuda:0", "cuda:1")
+            if self.model2 is not None:
+                self.model2.configure_manual_pipeline_parallelism("cuda:0", "cuda:1")
+            self.text_encoder.model.to("cuda:0")
+            self.vae.model.to("cuda:0")
+            if self.vae2 is not None:
+                self.vae2.model.to("cuda:0")
+            if hasattr(self, "clip"):
+                self.clip.model.to("cuda:0")
         
         self.kiwi_mllm = None
         self.kiwi_source_embedder_file = None
@@ -602,7 +614,9 @@ class WanAny2V:
         # context_NAG = torch.cat([context_NAG, context_NAG.new_zeros(text_len -context_NAG.size(0), context_NAG.size(1)) ]).unsqueeze(0) 
         
         from mmgp import offload
-        offloadobj.unload_all()
+        runtime_offloadobj = getattr(__import__("wgp"), "offloadobj", None)
+        if runtime_offloadobj is not None:
+            runtime_offloadobj.unload_all()
 
         offload.shared_state.update({"_nag_scale" : NAG_scale, "_nag_tau" : NAG_tau, "_nag_alpha":  NAG_alpha })
         if NAG_scale > 1: context = torch.cat([context, context_null], dim=0)

@@ -1327,6 +1327,33 @@ class WanModel(ModelMixin, ConfigMixin):
         if hasattr(self, "vace_blocks"): self.adapt_vace_model()
         if hasattr(self, "face_adapter"): self.adapt_animate_model()
 
+    @staticmethod
+    def _move_pipeline_value(value, device):
+        if torch.is_tensor(value):
+            return value.to(device)
+        if isinstance(value, list):
+            return [WanModel._move_pipeline_value(item, device) for item in value]
+        if isinstance(value, tuple):
+            return tuple(WanModel._move_pipeline_value(item, device) for item in value)
+        if isinstance(value, dict):
+            return {key: WanModel._move_pipeline_value(item, device) for key, item in value.items()}
+        return value
+
+    def configure_manual_pipeline_parallelism(self, first_device="cuda:0", second_device="cuda:1"):
+        if not torch.cuda.is_available() or torch.cuda.device_count() < 2:
+            raise RuntimeError("Manual Wan pipeline parallelism requires at least two CUDA devices.")
+        if self.num_layers != 40 or len(self.blocks) != 40:
+            raise RuntimeError(f"Manual Wan pipeline parallelism expects 40 blocks, found {self.num_layers}.")
+
+        self.pipeline_devices = (torch.device(first_device), torch.device(second_device))
+        first_device, second_device = self.pipeline_devices
+        for module in (self.patch_embedding, self.text_embedding, self.time_embedding, self.time_projection):
+            module.to(first_device)
+        self.blocks[:20].to(first_device)
+        self.blocks[20:].to(second_device)
+        self.head.to(second_device)
+        self._manual_pipeline_parallel = True
+
     def lock_layers_dtypes(self, hybrid_dtype = None, dtype = torch.float32):
         layer_list = [self.head, self.head.head, self.head.modulation, self.patch_embedding]
         if self.scail or self.scail2:
@@ -1996,6 +2023,29 @@ class WanModel(ModelMixin, ConfigMixin):
                     callback(-1, None, False, True)
                 if pipeline._interrupt:
                     return [None] * len(x_list)
+
+                if block_idx == 20 and getattr(self, "_manual_pipeline_parallel", False):
+                    second_device = self.pipeline_devices[1]
+                    x_list = self._move_pipeline_value(x_list, second_device)
+                    context_list = self._move_pipeline_value(context_list, second_device)
+                    hints_list = self._move_pipeline_value(hints_list, second_device)
+                    audio_scale_list = self._move_pipeline_value(audio_scale_list, second_device)
+                    multitalk_audio_list = self._move_pipeline_value(multitalk_audio_list, second_device)
+                    multitalk_masks_list = self._move_pipeline_value(multitalk_masks_list, second_device)
+                    motion_vec_list = self._move_pipeline_value(motion_vec_list, second_device)
+                    lynx_ip_embeds_list = self._move_pipeline_value(lynx_ip_embeds_list, second_device)
+                    lynx_ref_buffer_list = self._move_pipeline_value(lynx_ref_buffer_list, second_device)
+                    e = self._move_pipeline_value(e, second_device)
+                    e0 = self._move_pipeline_value(e0, second_device)
+                    freqs = self._move_pipeline_value(freqs, second_device)
+                    standin_freqs = self._move_pipeline_value(standin_freqs, second_device)
+                    kwargs = self._move_pipeline_value(kwargs, second_device)
+                    standin_x = self._move_pipeline_value(standin_x, second_device)
+                    standin_e0 = self._move_pipeline_value(standin_e0, second_device)
+                    animate2_ref_hidden = self._move_pipeline_value(animate2_ref_hidden, second_device)
+                    animate2_ref_context_emb = self._move_pipeline_value(animate2_ref_context_emb, second_device)
+                    animate2_ref_e0 = self._move_pipeline_value(animate2_ref_e0, second_device)
+                    animate2_ref_freqs = self._move_pipeline_value(animate2_ref_freqs, second_device)
 
                 if standin_x is not None:
                     if not standin_cache_enabled: get_cache("standin").clear()
