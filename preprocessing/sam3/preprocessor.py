@@ -81,15 +81,16 @@ def _autocast_context():
     return accelerator_autocast()
 
 
-def _bf16_prompt_payload(value):
+def _prompt_payload(value):
+    target_dtype = torch.float32 if get_accelerator_device().type == "cpu" else torch.bfloat16
     if torch.is_tensor(value):
-        return value.to(dtype=torch.bfloat16) if value.is_floating_point() else value
+        return value.to(dtype=target_dtype) if value.is_floating_point() and value.dtype != target_dtype else value
     if isinstance(value, dict):
-        return {key: _bf16_prompt_payload(item) for key, item in value.items()}
+        return {key: _prompt_payload(item) for key, item in value.items()}
     if isinstance(value, list):
-        return [_bf16_prompt_payload(item) for item in value]
+        return [_prompt_payload(item) for item in value]
     if isinstance(value, tuple):
-        return tuple(_bf16_prompt_payload(item) for item in value)
+        return tuple(_prompt_payload(item) for item in value)
     return value
 
 
@@ -359,7 +360,7 @@ def run_sam3_video(
             logger.info("SAM3 keyword currently being processed: '%s'", keyword)
             request = {"type": "add_prompt", "session_id": session_id, "frame_index": 0, "text": keyword}
             if preencoded_prompts is not None:
-                request["preencoded_text_outputs"] = _bf16_prompt_payload(preencoded_prompts[keyword])
+                request["preencoded_text_outputs"] = _prompt_payload(preencoded_prompts[keyword])
             with _autocast_context():
                 result = video_predictor.handle_request(request)
                 merge_outputs(0, result.get("outputs") if isinstance(result, dict) else None)

@@ -46,8 +46,14 @@ class Sam3BasePredictor:
         return accelerator_autocast()
 
     def _cast_model_inputs(self, value):
-        dtype = first_floating_parameter_dtype(self.model, default=torch.bfloat16)
+        dtype = first_floating_parameter_dtype(self.model, default=torch.float32)
         return cast_floating_tensors(value, dtype)
+
+    def _run_model(self, method, kwargs):
+        if next(self.model.parameters(), torch.empty(0)).device.type == "cpu":
+            return method(**kwargs)
+        with self._bf16_autocast():
+            return method(**kwargs)
 
     # ── Request dispatch ──────────────────────────────────────────────
 
@@ -216,8 +222,10 @@ class Sam3BasePredictor:
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
         filtered_kwargs = self._cast_model_inputs(filtered_kwargs)
 
-        with self._bf16_autocast():
-            frame_idx, outputs = self.model.add_prompt(**filtered_kwargs)
+        frame_idx, outputs = self._run_model(
+            self.model.add_prompt,
+            filtered_kwargs,
+        )
         return {"frame_index": frame_idx, "outputs": outputs}
 
     def remove_object(
@@ -302,21 +310,35 @@ class Sam3BasePredictor:
                     propagate_kwargs[k] = v
             propagate_kwargs = self._cast_model_inputs(propagate_kwargs)
 
-            # Forward propagation
-            with self._bf16_autocast():
+            # Keep CPU execution outside any autocast context.
+            model_device = next(self.model.parameters(), torch.empty(0)).device
+            if model_device.type == "cpu":
                 if propagation_direction in ["both", "forward"]:
                     for frame_idx, outputs in self.model.propagate_in_video(
                         **propagate_kwargs,
                         reverse=False,
                     ):
                         yield {"frame_index": frame_idx, "outputs": outputs}
-                # Backward propagation
                 if propagation_direction in ["both", "backward"]:
                     for frame_idx, outputs in self.model.propagate_in_video(
                         **propagate_kwargs,
                         reverse=True,
                     ):
                         yield {"frame_index": frame_idx, "outputs": outputs}
+            else:
+                with self._bf16_autocast():
+                    if propagation_direction in ["both", "forward"]:
+                        for frame_idx, outputs in self.model.propagate_in_video(
+                            **propagate_kwargs,
+                            reverse=False,
+                        ):
+                            yield {"frame_index": frame_idx, "outputs": outputs}
+                    if propagation_direction in ["both", "backward"]:
+                        for frame_idx, outputs in self.model.propagate_in_video(
+                            **propagate_kwargs,
+                            reverse=True,
+                        ):
+                            yield {"frame_index": frame_idx, "outputs": outputs}
         finally:
             logger.info(f"propagation ended in session {session_id}")
 
