@@ -3352,7 +3352,7 @@ if args.advanced: advanced = True
 
 if transformer_type != None and not transformer_type in model_types and not transformer_type in models_def: transformer_type = None
 if transformer_type == None:
-    transformer_type = transformer_types[0] if len(transformer_types) > 0 else "t2v"
+    transformer_type = transformer_types[0] if len(transformer_types) > 0 else "scail2_14B"
 
 transformer_quantization =server_config.get("transformer_quantization", "int8")
 
