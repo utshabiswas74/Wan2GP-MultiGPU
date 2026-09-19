@@ -11354,23 +11354,6 @@ def generate_media_tab(update_form = False, state_dict = None, ui_defaults = Non
         gen["queue"] = []
         state_dict["gen"] = gen
 
-        if model_type == "scail2_14B":
-            default_accelerator_profile = "profiles/wan_i2v/Image2Video FusioniX - 10 Steps.json"
-            default_profile_settings, _, _ = get_settings_from_file(
-                state_dict,
-                default_accelerator_profile,
-                True,
-                True,
-                True,
-                min_settings_version=2.38,
-                merge_loras="merge before",
-                skip_validate_settings=True,
-            )
-            if default_profile_settings is not None:
-                ui_defaults = default_profile_settings
-                ui_defaults["lset_name"] = default_accelerator_profile
-                set_model_settings(state_dict, model_type, ui_defaults)
-
     def ui_get(key, default = None):
         if default is None:
             return ui_defaults.get(key, primary_settings.get(key,""))
