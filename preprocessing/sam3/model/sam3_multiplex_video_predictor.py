@@ -64,6 +64,8 @@ class Sam3MultiplexVideoPredictor(Sam3BasePredictor):
     def _ensure_model_on_device(self):
         device = get_accelerator_device()
         if device.type == "cpu" or self.model is None:
+            if self.model is not None:
+                self.model.to(device="cpu", dtype=torch.float32)
             return
         try:
             first_parameter = next(self.model.parameters())

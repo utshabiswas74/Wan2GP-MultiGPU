@@ -163,6 +163,8 @@ def _encode_text_outputs(text_encoder, captions: list[str], device: torch.device
     masks, memories, embeds = [], [], []
     if is_accelerator_device(device):
         text_encoder.to(device=device, dtype=torch.bfloat16)
+    else:
+        text_encoder.to(device="cpu", dtype=torch.float32)
     for caption in captions:
         with torch.inference_mode(), _autocast_context():
             text_attention_mask, text_memory, text_embeds = text_encoder([caption], device=device)
@@ -189,6 +191,8 @@ def _encode_keyword_prompts(model_builder, checkpoint_path: str, bpe_path: str, 
             text_encoder = _TEXT_ENCODER_CACHE
         else:
             text_encoder = model_builder.build_sam3_text_encoder(checkpoint_path=checkpoint_path, bpe_path=bpe_path)
+            if device.type == "cpu":
+                text_encoder.to(device="cpu", dtype=torch.float32)
             if keep_text_encoder_loaded:
                 _TEXT_ENCODER_CACHE = text_encoder
                 _TEXT_ENCODER_CACHE_KEY = cache_key
