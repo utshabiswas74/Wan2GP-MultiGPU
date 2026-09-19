@@ -1349,8 +1349,8 @@ class WanModel(ModelMixin, ConfigMixin):
         first_device, second_device = self.pipeline_devices
         for module in (self.patch_embedding, self.text_embedding, self.time_embedding, self.time_projection):
             module.to(first_device)
-        self.blocks[:12].to(first_device)
-        self.blocks[12:40].to(second_device)
+        self.blocks[:8].to(first_device)
+        self.blocks[8:40].to(second_device)
         self.head.to(second_device)
         self._manual_pipeline_parallel = True
 
@@ -2024,7 +2024,7 @@ class WanModel(ModelMixin, ConfigMixin):
                 if pipeline._interrupt:
                     return [None] * len(x_list)
 
-                if block_idx == 12 and getattr(self, "_manual_pipeline_parallel", False):
+                if block_idx == 8 and getattr(self, "_manual_pipeline_parallel", False):
                     second_device = self.pipeline_devices[1]
                     x_list = self._move_pipeline_value(x_list, second_device)
                     context_list = self._move_pipeline_value(context_list, second_device)
