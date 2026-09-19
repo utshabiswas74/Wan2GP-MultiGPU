@@ -28,12 +28,6 @@ class Sam3Processor:
         )
         self.confidence_threshold = confidence_threshold
 
-    def _image_dtype(self):
-        for parameter in self.model.backbone.parameters():
-            if parameter.is_floating_point():
-                return parameter.dtype
-        return torch.float32
-
         self.find_stage = FindStage(
             img_ids=torch.tensor([0], device=device, dtype=torch.long),
             text_ids=torch.tensor([0], device=device, dtype=torch.long),
@@ -43,6 +37,12 @@ class Sam3Processor:
             input_points=None,
             input_points_mask=None,
         )
+
+    def _image_dtype(self):
+        for parameter in self.model.backbone.parameters():
+            if parameter.is_floating_point():
+                return parameter.dtype
+        return torch.float32
 
     @torch.inference_mode()
     def set_image(self, image, state=None):
