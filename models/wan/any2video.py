@@ -104,14 +104,14 @@ class WanAny2V:
         mixed_precision_transformer = False,
         VAE_upsampling = None,
     ):
-        self.device = torch.device(f"cuda")
+        self.manual_pipeline_parallel = os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL", "0") == "1"
+        self.device = torch.device("cpu") if self.manual_pipeline_parallel else torch.device("cuda")
         self.config = config
         self.VAE_dtype = VAE_dtype
         self.dtype = dtype
         self.num_train_timesteps = config.num_train_timesteps
         self.param_dtype = config.param_dtype
         self.model_def = model_def
-        self.manual_pipeline_parallel = os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL", "0") == "1"
         self.model2 = None
         self.transformer_switch = model_def.get("URLs2", None) is not None
         self.is_mocha = model_def.get("mocha_mode", False)
@@ -128,7 +128,7 @@ class WanAny2V:
         if hasattr(config, "clip_checkpoint") and not model_def.get("i2v_2_2", False) or base_model_type in ["animate"]:
             self.clip = CLIPModel(
                 dtype=config.clip_dtype,
-                device=self.device,
+                device=torch.device("cpu"),
                 checkpoint_path=fl.locate_file(config.clip_checkpoint),
                 tokenizer_path=fl.locate_folder("xlm-roberta-large"))
 
@@ -163,11 +163,11 @@ class WanAny2V:
         
         self.vae = vae( vae_pth=fl.locate_file(vae_checkpoint), dtype= VAE_dtype, upsampler_factor = vae_upsampler_factor, device="cpu")
         self.vae.upsampling_set = VAE_upsampling
-        self.vae.device = self.device # need to set to cuda so that vae buffers are properly moved (although the rest will stay in the CPU)
+        self.vae.device = torch.device("cpu")
         self.vae2 = None
         if vae_checkpoint2 is not None:
             self.vae2 = vae( vae_pth=fl.locate_file(vae_checkpoint2), dtype= VAE_dtype, device="cpu")
-            self.vae2.device = self.device
+            self.vae2.device = torch.device("cpu")
         
         # config_filename= "configs/t2v_1.3B.json"
         # import json
@@ -253,12 +253,13 @@ class WanAny2V:
             self.model.configure_manual_pipeline_parallelism("cuda:0", "cuda:1")
             if self.model2 is not None:
                 self.model2.configure_manual_pipeline_parallelism("cuda:0", "cuda:1")
-            self.text_encoder.model.to("cuda:0")
-            self.vae.model.to("cuda:0")
+            if self.text_encoder is not None:
+                self.text_encoder.model.to("cpu")
+            self.vae.model.to("cpu")
             if self.vae2 is not None:
-                self.vae2.model.to("cuda:0")
+                self.vae2.model.to("cpu")
             if hasattr(self, "clip"):
-                self.clip.model.to("cuda:0")
+                self.clip.model.to("cpu")
         
         self.kiwi_mllm = None
         self.kiwi_source_embedder_file = None
