@@ -48,6 +48,9 @@ class Sam3MultiplexVideoPredictor(Sam3BasePredictor):
         self.async_loading_frames = async_loading_frames
         self.manual_model_loading = manual_model_loading
 
+        if get_accelerator_device().type == "cpu":
+            self.install_cpu_float32_hook()
+
         # turn on tfloat32 for Ampere GPUs
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True

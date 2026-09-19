@@ -51,6 +51,7 @@ class Sam3VideoPredictor(Sam3BasePredictor):
         )
         if os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL") == "1":
             self.model = model.to(device="cpu", dtype=torch.float32).eval()
+            self.install_cpu_float32_hook()
         else:
             self.model = model.cuda().eval()
 

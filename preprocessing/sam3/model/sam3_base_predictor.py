@@ -40,6 +40,47 @@ class Sam3BasePredictor:
         # Subclasses must populate these
         self.model = None
         self._all_inference_states: Dict[str, dict] = {}
+        self._cpu_dtype_hook = None
+
+    @staticmethod
+    def recursive_cast(obj, target_dtype):
+        if torch.is_tensor(obj):
+            if obj.is_floating_point() and obj.dtype != target_dtype:
+                return obj.to(dtype=target_dtype)
+            return obj
+        if isinstance(obj, dict):
+            return {
+                key: Sam3BasePredictor.recursive_cast(value, target_dtype)
+                for key, value in obj.items()
+            }
+        if isinstance(obj, list):
+            return [
+                Sam3BasePredictor.recursive_cast(value, target_dtype)
+                for value in obj
+            ]
+        if isinstance(obj, tuple):
+            return tuple(
+                Sam3BasePredictor.recursive_cast(value, target_dtype)
+                for value in obj
+            )
+        return obj
+
+    def install_cpu_float32_hook(self):
+        if self.model is None:
+            raise RuntimeError("Cannot install the CPU dtype hook before assigning self.model.")
+
+        self.model.to(device="cpu", dtype=torch.float32)
+
+        def cast_inputs(module, args, kwargs):
+            args = self.recursive_cast(args, torch.float32)
+            kwargs = self.recursive_cast(kwargs, torch.float32)
+            return args, kwargs
+
+        self._cpu_dtype_hook = self.model.register_forward_pre_hook(
+            cast_inputs,
+            with_kwargs=True,
+        )
+        return self._cpu_dtype_hook
 
     @staticmethod
     def _bf16_autocast():
