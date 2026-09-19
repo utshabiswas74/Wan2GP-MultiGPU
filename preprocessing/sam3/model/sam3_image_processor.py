@@ -28,6 +28,12 @@ class Sam3Processor:
         )
         self.confidence_threshold = confidence_threshold
 
+    def _image_dtype(self):
+        for parameter in self.model.backbone.parameters():
+            if parameter.is_floating_point():
+                return parameter.dtype
+        return torch.float32
+
         self.find_stage = FindStage(
             img_ids=torch.tensor([0], device=device, dtype=torch.long),
             text_ids=torch.tensor([0], device=device, dtype=torch.long),
@@ -52,7 +58,7 @@ class Sam3Processor:
             raise ValueError("Image must be a PIL image or a tensor")
 
         image = v2.functional.to_image(image).to(self.device)
-        image = self.transform(image).unsqueeze(0)
+        image = self.transform(image).unsqueeze(0).to(dtype=self._image_dtype())
 
         state["original_height"] = height
         state["original_width"] = width
@@ -89,7 +95,7 @@ class Sam3Processor:
         state["original_widths"] = [image.width for image in images]
 
         images = [
-            self.transform(v2.functional.to_image(image).to(self.device))
+            self.transform(v2.functional.to_image(image).to(self.device)).to(dtype=self._image_dtype())
             for image in images
         ]
         images = torch.stack(images, dim=0)
