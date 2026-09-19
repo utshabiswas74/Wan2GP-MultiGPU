@@ -17,7 +17,7 @@ _PACKAGE_ROOT = Path(__file__).resolve().parent
 _SAM3_FOLDER = "sam3"
 _SAM3_CHECKPOINT_NAME = "sam3.1_multiplex_bf16.safetensors"
 _SAM3_BPE_NAME = "bpe_simple_vocab_16e6.txt.gz"
-KEEP_VIDEO_FRAMES_ON_CUDA = True
+KEEP_VIDEO_FRAMES_ON_CUDA = os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL") != "1"
 _TEXT_ENCODER_CACHE = None
 _TEXT_ENCODER_CACHE_KEY = None
 DEFAULT_INSTANCE_PALETTE_RGB = np.array([

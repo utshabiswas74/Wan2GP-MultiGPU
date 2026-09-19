@@ -1,4 +1,5 @@
 from contextlib import nullcontext
+import os
 
 import torch
 
@@ -8,6 +9,8 @@ def mps_is_available() -> bool:
 
 
 def get_accelerator_device() -> torch.device:
+    if os.environ.get("WAN_MANUAL_PIPELINE_PARALLEL") == "1":
+        return torch.device("cpu")
     if torch.cuda.is_available():
         return torch.device("cuda")
     if mps_is_available():
