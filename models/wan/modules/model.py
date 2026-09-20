@@ -907,22 +907,12 @@ class WanModel(ModelMixin, ConfigMixin):
         try:
             self._suspend_mmgp_hooks()
             for module in self._dual_gpu_resident_modules:
-                module.to(self._dual_gpu_devices[0])
-                for parameter in module.parameters():
-                    if parameter.device != self._dual_gpu_devices[0]:
-                        raise RuntimeError("Wan auxiliary parameters must be resident on cuda:0")
-                for buffer in module.buffers():
-                    if buffer.device != self._dual_gpu_devices[0]:
-                        raise RuntimeError("Wan auxiliary buffers must be resident on cuda:0")
+                self._move_dual_gpu_module(module, self._dual_gpu_devices[0])
+                self._assert_dual_gpu_module_device(module, self._dual_gpu_devices[0], "Wan auxiliary")
             for block_index, block in enumerate(self.blocks):
                 block_device = self._dual_gpu_devices[0 if block_index < split_index else 1]
-                block.to(block_device)
-                for parameter in block.parameters():
-                    if parameter.device != block_device:
-                        raise RuntimeError(f"Wan block {block_index} parameter was not moved to {block_device}")
-                for buffer in block.buffers():
-                    if buffer.device != block_device:
-                        raise RuntimeError(f"Wan block {block_index} buffer was not moved to {block_device}")
+                self._move_dual_gpu_module(block, block_device)
+                self._assert_dual_gpu_module_device(block, block_device, f"Wan block {block_index}")
         except BaseException:
             try:
                 self.disable_dual_gpu_resident()
@@ -934,7 +924,7 @@ class WanModel(ModelMixin, ConfigMixin):
             return
         try:
             for block in self.blocks:
-                block.to("cpu")
+                self._move_dual_gpu_module(block, torch.device("cpu"))
         finally:
             self._restore_mmgp_hooks()
             self._dual_gpu_resident = False
@@ -946,6 +936,54 @@ class WanModel(ModelMixin, ConfigMixin):
             for device_index in (0, 1):
                 torch.cuda.synchronize(device_index)
             torch.cuda.empty_cache()
+
+    @staticmethod
+    def _iter_dual_gpu_modules(root):
+        visited_modules = set()
+        pending = [root]
+        while pending:
+            module = pending.pop()
+            module_id = id(module)
+            if module_id in visited_modules:
+                continue
+            visited_modules.add(module_id)
+            yield module
+            pending.extend(child for child in module._modules.values() if child is not None)
+
+    @classmethod
+    def _move_dual_gpu_module(cls, root, device):
+        visited_tensors = set()
+        moved_buffers = {}
+        with torch.no_grad():
+            for module in cls._iter_dual_gpu_modules(root):
+                for parameter in module._parameters.values():
+                    if parameter is None or id(parameter) in visited_tensors:
+                        continue
+                    visited_tensors.add(id(parameter))
+                    parameter.data = parameter.data.to(device=device)
+                for name, buffer in module._buffers.items():
+                    if buffer is None:
+                        continue
+                    buffer_id = id(buffer)
+                    if buffer_id not in moved_buffers:
+                        moved_buffers[buffer_id] = buffer.to(device=device)
+                    module._buffers[name] = moved_buffers[buffer_id]
+                    visited_tensors.add(buffer_id)
+
+    @classmethod
+    def _assert_dual_gpu_module_device(cls, root, device, label):
+        visited_tensors = set()
+        for module in cls._iter_dual_gpu_modules(root):
+            for parameter in module._parameters.values():
+                if parameter is not None and id(parameter) not in visited_tensors:
+                    visited_tensors.add(id(parameter))
+                    if parameter.device != device:
+                        raise RuntimeError(f"{label} parameter was not moved to {device}")
+            for buffer in module._buffers.values():
+                if buffer is not None and id(buffer) not in visited_tensors:
+                    visited_tensors.add(id(buffer))
+                    if buffer.device != device:
+                        raise RuntimeError(f"{label} buffer was not moved to {device}")
 
     def _suspend_mmgp_hooks(self):
         self._dual_gpu_mmgp_hooks = []
