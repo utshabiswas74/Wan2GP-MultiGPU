@@ -1017,7 +1017,7 @@ class WanModel(ModelMixin, ConfigMixin):
     @staticmethod
     def _move_dual_gpu_state(value, device):
         if torch.is_tensor(value):
-            return value.to(device)
+            return value if value.device == device else value.to(device)
         if isinstance(value, list):
             return [WanModel._move_dual_gpu_state(item, device) for item in value]
         if isinstance(value, tuple):
@@ -2138,6 +2138,10 @@ class WanModel(ModelMixin, ConfigMixin):
 
         if any(x_should_calc):
             for block_idx, block in enumerate(self.blocks):
+                block_device = next(
+                    (parameter.device for module in self._iter_dual_gpu_modules(block) for parameter in module._parameters.values() if parameter is not None),
+                    x_list[0].device,
+                )
                 if getattr(self, "_dual_gpu_resident", False):
                     block_device = self._dual_gpu_devices[0 if block_idx < self._dual_gpu_split_index else 1]
                     x_list, context_list, hints_list, e0, freqs, kwargs = self._route_dual_gpu_state(
@@ -2164,7 +2168,10 @@ class WanModel(ModelMixin, ConfigMixin):
 
                 if standin_x is not None:
                     if not standin_cache_enabled: get_cache("standin").clear()
-                    standin_x = block(standin_x, context = None, grid_sizes = None, e= standin_e0, freqs = standin_freqs, standin_phase = 1)
+                    standin_x_in = self._move_dual_gpu_state(standin_x, block_device)
+                    standin_e_in = self._move_dual_gpu_state(standin_e0, block_device)
+                    standin_freqs_in = self._move_dual_gpu_state(standin_freqs, block_device)
+                    standin_x = block(standin_x_in, context = None, grid_sizes = None, e= standin_e_in, freqs = standin_freqs_in, standin_phase = 1)
 
                 if animate2_enabled:
                     animate2_generation = {
@@ -2190,7 +2197,12 @@ class WanModel(ModelMixin, ConfigMixin):
                 elif perturbation_layers is not None and block_idx in perturbation_layers:
                     if x_id != 0 or not x_should_calc[0]:
                         continue
-                    x_list[0] = block(x_list[0], context = context_list[0], audio_scale= audio_scale_list[0], e= e0, **kwargs)
+                    x_in = self._move_dual_gpu_state(x_list[0], block_device)
+                    context_in = self._move_dual_gpu_state(context_list[0], block_device)
+                    audio_scale_in = self._move_dual_gpu_state(audio_scale_list[0], block_device)
+                    e_in = self._move_dual_gpu_state(e0, block_device)
+                    block_kwargs = self._move_dual_gpu_state(kwargs, block_device)
+                    x_list[0] = block(x_in, context = context_in, audio_scale = audio_scale_in, e= e_in, **block_kwargs)
                 else:
                     for i, (x, context, hints, audio_scale, multitalk_audio, multitalk_masks, should_calc, motion_vec, lynx_ip_embeds,lynx_ref_buffer) in enumerate(zip(x_list, context_list, hints_list, audio_scale_list, multitalk_audio_list, multitalk_masks_list, x_should_calc,motion_vec_list, lynx_ip_embeds_list,lynx_ref_buffer_list)):
                         if should_calc:
@@ -2198,7 +2210,18 @@ class WanModel(ModelMixin, ConfigMixin):
                             if bernini_enabled:
                                 block_kwargs = dict(kwargs)
                                 block_kwargs["freqs"] = bernini_freqs_list[i]
-                            x_list[i] = block(x, context = context, hints= hints, audio_scale= audio_scale, multitalk_audio = multitalk_audio, multitalk_masks =multitalk_masks, e= e0,  motion_vec = motion_vec, lynx_ip_embeds= lynx_ip_embeds, lynx_ref_buffer = lynx_ref_buffer, sub_x_no =i,  **block_kwargs)
+                            x_in = self._move_dual_gpu_state(x, block_device)
+                            context_in = self._move_dual_gpu_state(context, block_device)
+                            hints_in = self._move_dual_gpu_state(hints, block_device)
+                            audio_scale_in = self._move_dual_gpu_state(audio_scale, block_device)
+                            multitalk_audio_in = self._move_dual_gpu_state(multitalk_audio, block_device)
+                            multitalk_masks_in = self._move_dual_gpu_state(multitalk_masks, block_device)
+                            e_in = self._move_dual_gpu_state(e0, block_device)
+                            motion_vec_in = self._move_dual_gpu_state(motion_vec, block_device)
+                            lynx_ip_embeds_in = self._move_dual_gpu_state(lynx_ip_embeds, block_device)
+                            lynx_ref_buffer_in = self._move_dual_gpu_state(lynx_ref_buffer, block_device)
+                            block_kwargs = self._move_dual_gpu_state(block_kwargs, block_device)
+                            x_list[i] = block(x_in, context = context_in, hints= hints_in, audio_scale = audio_scale_in, multitalk_audio = multitalk_audio_in, multitalk_masks = multitalk_masks_in, e= e_in, motion_vec = motion_vec_in, lynx_ip_embeds = lynx_ip_embeds_in, lynx_ref_buffer = lynx_ref_buffer_in, sub_x_no =i, **block_kwargs)
                             del x
                     context = hints = None
 
