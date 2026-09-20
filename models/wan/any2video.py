@@ -1456,6 +1456,10 @@ class WanAny2V:
                         sub_parallel_cache2.previous_residual = None
                         sub_parallel_cache2.previous_modulated_input = None
                     self.model2.cache = sub_parallel_cache2
+            if hasattr(self.model, "disable_dual_gpu_resident"):
+                self.model.disable_dual_gpu_resident()
+            if self.model2 is not None and hasattr(self.model2, "disable_dual_gpu_resident"):
+                self.model2.disable_dual_gpu_resident()
             clear_caches()
             gc.collect()
             torch.cuda.empty_cache()
@@ -1482,6 +1486,15 @@ class WanAny2V:
         torch.cuda.empty_cache()
         # denoising
         trans = self.model
+        dual_gpu_resident = (
+            self.model2 is None
+            and getattr(self.model, "num_layers", 0) == 40
+            and getattr(self.model, "dim", 0) == 5120
+            and torch.cuda.is_available()
+            and torch.cuda.device_count() >= 2
+        )
+        if dual_gpu_resident:
+            self.model.enable_dual_gpu_resident(split_index=20)
         if self_refiner_setting > 0:
             self_refiner_handler = create_self_refiner_handler(self_refiner_plan, self_refiner_f_uncertainty, self_refiner_setting, self_refiner_certain_percentage)
         else:

@@ -889,6 +889,64 @@ class MLPProj(torch.nn.Module):
         return clip_extra_context_tokens
 
 class WanModel(ModelMixin, ConfigMixin):
+    def enable_dual_gpu_resident(self, split_index=20):
+        if not torch.cuda.is_available() or torch.cuda.device_count() < 2:
+            raise RuntimeError("Dual-GPU Wan execution requires two CUDA devices")
+        if len(self.blocks) != 40 or split_index != 20:
+            raise RuntimeError("Dual-GPU Wan execution requires a 40-block transformer and a split at block 20")
+        if getattr(self, "_dual_gpu_resident", False):
+            return
+
+        self._dual_gpu_devices = (torch.device("cuda:0"), torch.device("cuda:1"))
+        self._dual_gpu_split_index = split_index
+        self._dual_gpu_resident_modules = [
+            self.patch_embedding,
+            self.text_embedding,
+            self.time_embedding,
+            self.time_projection,
+            self.head,
+        ]
+        for module in self._dual_gpu_resident_modules:
+            module.to(self._dual_gpu_devices[0])
+        for block_index, block in enumerate(self.blocks):
+            block.to(self._dual_gpu_devices[0 if block_index < split_index else 1])
+        self._dual_gpu_resident = True
+        offload.shared_state["_wan_dual_gpu_resident"] = True
+
+    def disable_dual_gpu_resident(self):
+        if not getattr(self, "_dual_gpu_resident", False):
+            return
+        for block in self.blocks:
+            block.to("cpu")
+        for module in getattr(self, "_dual_gpu_resident_modules", []):
+            module.to("cpu")
+        self._dual_gpu_resident = False
+        offload.shared_state.pop("_wan_dual_gpu_resident", None)
+        for device_index in (0, 1):
+            torch.cuda.synchronize(device_index)
+        torch.cuda.empty_cache()
+
+    @staticmethod
+    def _move_dual_gpu_state(value, device):
+        if torch.is_tensor(value):
+            return value.to(device)
+        if isinstance(value, list):
+            return [WanModel._move_dual_gpu_state(item, device) for item in value]
+        if isinstance(value, tuple):
+            return tuple(WanModel._move_dual_gpu_state(item, device) for item in value)
+        if isinstance(value, dict):
+            return {key: WanModel._move_dual_gpu_state(item, device) for key, item in value.items()}
+        return value
+
+    def _route_dual_gpu_state(self, device, x_list, context_list, hints_list, e0, freqs, kwargs):
+        x_list = self._move_dual_gpu_state(x_list, device)
+        context_list = self._move_dual_gpu_state(context_list, device)
+        hints_list = self._move_dual_gpu_state(hints_list, device)
+        e0 = self._move_dual_gpu_state(e0, device)
+        freqs = self._move_dual_gpu_state(freqs, device)
+        kwargs = self._move_dual_gpu_state(kwargs, device)
+        return x_list, context_list, hints_list, e0, freqs, kwargs
+
     def setup_chipmunk(self):
         # from chipmunk.util import LayerCounter
         # from chipmunk.modules import SparseDiffMlp, SparseDiffAttn
@@ -1991,7 +2049,25 @@ class WanModel(ModelMixin, ConfigMixin):
 
         if any(x_should_calc):
             for block_idx, block in enumerate(self.blocks):
-                offload.shared_state["layer"] = block_idx
+                if getattr(self, "_dual_gpu_resident", False):
+                    block_device = self._dual_gpu_devices[0 if block_idx < self._dual_gpu_split_index else 1]
+                    x_list, context_list, hints_list, e0, freqs, kwargs = self._route_dual_gpu_state(
+                        block_device, x_list, context_list, hints_list, e0, freqs, kwargs)
+                    bernini_freqs_list = self._move_dual_gpu_state(bernini_freqs_list, block_device)
+                    motion_vec_list = self._move_dual_gpu_state(motion_vec_list, block_device)
+                    multitalk_audio_list = self._move_dual_gpu_state(multitalk_audio_list, block_device)
+                    multitalk_masks_list = self._move_dual_gpu_state(multitalk_masks_list, block_device)
+                    lynx_ip_embeds_list = self._move_dual_gpu_state(lynx_ip_embeds_list, block_device)
+                    lynx_ref_buffer_list = self._move_dual_gpu_state(lynx_ref_buffer_list, block_device)
+                    standin_x = self._move_dual_gpu_state(standin_x, block_device)
+                    standin_e0 = self._move_dual_gpu_state(standin_e0, block_device)
+                    standin_freqs = self._move_dual_gpu_state(standin_freqs, block_device)
+                    animate2_ref_hidden = self._move_dual_gpu_state(animate2_ref_hidden, block_device)
+                    animate2_ref_context_emb = self._move_dual_gpu_state(animate2_ref_context_emb, block_device)
+                    animate2_ref_e0 = self._move_dual_gpu_state(animate2_ref_e0, block_device)
+                    animate2_ref_freqs = self._move_dual_gpu_state(animate2_ref_freqs, block_device)
+                else:
+                    offload.shared_state["layer"] = block_idx
                 if callback != None:
                     callback(-1, None, False, True)
                 if pipeline._interrupt:
@@ -2036,6 +2112,11 @@ class WanModel(ModelMixin, ConfigMixin):
                             x_list[i] = block(x, context = context, hints= hints, audio_scale= audio_scale, multitalk_audio = multitalk_audio, multitalk_masks =multitalk_masks, e= e0,  motion_vec = motion_vec, lynx_ip_embeds= lynx_ip_embeds, lynx_ref_buffer = lynx_ref_buffer, sub_x_no =i,  **block_kwargs)
                             del x
                     context = hints = None
+
+        if getattr(self, "_dual_gpu_resident", False):
+            x_list, context_list, hints_list, e0, freqs, kwargs = self._route_dual_gpu_state(
+                self._dual_gpu_devices[0], x_list, context_list, hints_list, e0, freqs, kwargs)
+            bernini_freqs_list = self._move_dual_gpu_state(bernini_freqs_list, self._dual_gpu_devices[0])
 
         if animate2_enabled:
             animate2_ref_hidden = animate2_ref_context_emb = animate2_ref_e0 = animate2_ref_freqs = None
