@@ -905,6 +905,7 @@ class WanModel(ModelMixin, ConfigMixin):
         ]
         self._dual_gpu_resident = True
         try:
+            self._suspend_mmgp_hooks()
             for module in self._dual_gpu_resident_modules:
                 module.to(self._dual_gpu_devices[0])
                 for parameter in module.parameters():
@@ -922,7 +923,6 @@ class WanModel(ModelMixin, ConfigMixin):
                 for buffer in block.buffers():
                     if buffer.device != block_device:
                         raise RuntimeError(f"Wan block {block_index} buffer was not moved to {block_device}")
-            self._suspend_mmgp_hooks()
         except BaseException:
             try:
                 self.disable_dual_gpu_resident()
@@ -950,15 +950,23 @@ class WanModel(ModelMixin, ConfigMixin):
     def _suspend_mmgp_hooks(self):
         self._dual_gpu_mmgp_hooks = []
         hook_names = ("_forward_pre_hooks", "_forward_hooks", "_forward_hooks_with_kwargs")
-        for module in self.modules():
+        visited = set()
+        pending = [self]
+        while pending:
+            module = pending.pop()
+            module_id = id(module)
+            if module_id in visited:
+                continue
+            visited.add(module_id)
+            pending.extend(child for child in module._modules.values() if child is not None)
             for hook_name in hook_names:
                 hooks = getattr(module, hook_name, None)
                 if hooks is None:
                     continue
                 for hook_id, hook in list(hooks.items()):
                     hook_module = getattr(hook, "__module__", "") or type(hook).__module__
-                    hook_name = getattr(hook, "__name__", "") or type(hook).__name__
-                    hook_identity = f"{hook_module}.{hook_name}".lower()
+                    callable_name = getattr(hook, "__name__", "") or type(hook).__name__
+                    hook_identity = f"{hook_module}.{callable_name}".lower()
                     if hook_module.startswith("mmgp") and "lora" not in hook_identity:
                         self._dual_gpu_mmgp_hooks.append((hooks, hook_id, hook))
                         del hooks[hook_id]

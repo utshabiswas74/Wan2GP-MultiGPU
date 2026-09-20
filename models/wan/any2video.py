@@ -1445,7 +1445,13 @@ class WanAny2V:
         if self.model2 is not None: update_loras_slists(self.model2, loras_slists, len(original_timesteps), phase_switch_step= phase_switch_step, phase_switch_step2= phase_switch_step2)
         callback(-1, None, True, override_num_inference_steps = updated_num_steps, denoising_extra = denoising_extra)
 
+        cleanup_done = False
+
         def clear():
+            nonlocal cleanup_done
+            if cleanup_done:
+                return None
+            cleanup_done = True
             try:
                 if sub_parallel_windows is not None:
                     if sub_parallel_cache is not None:
