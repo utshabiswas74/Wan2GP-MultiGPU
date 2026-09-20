@@ -300,22 +300,7 @@ def _add_bias_in_place_or_fallback(output: torch.Tensor, bias: Optional[torch.Te
     return output
 
 
-def _move_quanto_storage(value, device):
-    """Keep Quanto's hidden quantized storage beside the active tensor device."""
-    data = getattr(value, "_data", None)
-    scale = getattr(value, "_scale", None)
-    if torch.is_tensor(data) and data.device != device:
-        value._data = data.to(device=device)
-    if torch.is_tensor(scale) and scale.device != device:
-        value._scale = scale.to(device=device)
-    return value
-
-
 def _default_quanto_qbytes_linear_forward(ctx, input, other, bias=None):
-    _move_quanto_storage(input, input.device)
-    _move_quanto_storage(other, input.device)
-    if bias is not None and bias.device != input.device:
-        bias = bias.to(device=input.device)
     ctx.save_for_backward(input, other)
     if _is_qbytes_tensor(input):
         # MPS: torch.ops.quanto.qbytes_mm has no MPS kernel → CPU fallback

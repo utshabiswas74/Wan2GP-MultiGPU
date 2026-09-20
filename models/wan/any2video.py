@@ -1445,41 +1445,21 @@ class WanAny2V:
         if self.model2 is not None: update_loras_slists(self.model2, loras_slists, len(original_timesteps), phase_switch_step= phase_switch_step, phase_switch_step2= phase_switch_step2)
         callback(-1, None, True, override_num_inference_steps = updated_num_steps, denoising_extra = denoising_extra)
 
-        cleanup_done = False
-
         def clear():
-            nonlocal cleanup_done
-            if cleanup_done:
-                return None
-            cleanup_done = True
-            try:
-                if sub_parallel_windows is not None:
-                    if sub_parallel_cache is not None:
-                        sub_parallel_cache.previous_residual = None
-                        sub_parallel_cache.previous_modulated_input = None
-                    self.model.cache = sub_parallel_cache
-                    if self.model2 is not None:
-                        if sub_parallel_cache2 is not None:
-                            sub_parallel_cache2.previous_residual = None
-                            sub_parallel_cache2.previous_modulated_input = None
-                        self.model2.cache = sub_parallel_cache2
-            finally:
-                try:
-                    if hasattr(self.model, "disable_dual_gpu_resident"):
-                        self.model.disable_dual_gpu_resident()
-                    if self.model2 is not None and hasattr(self.model2, "disable_dual_gpu_resident"):
-                        self.model2.disable_dual_gpu_resident()
-                finally:
-                    clear_caches()
-                    gc.collect()
-                    torch.cuda.empty_cache()
+            if sub_parallel_windows is not None:
+                if sub_parallel_cache is not None:
+                    sub_parallel_cache.previous_residual = None
+                    sub_parallel_cache.previous_modulated_input = None
+                self.model.cache = sub_parallel_cache
+                if self.model2 is not None:
+                    if sub_parallel_cache2 is not None:
+                        sub_parallel_cache2.previous_residual = None
+                        sub_parallel_cache2.previous_modulated_input = None
+                    self.model2.cache = sub_parallel_cache2
+            clear_caches()
+            gc.collect()
+            torch.cuda.empty_cache()
             return None
-
-        def teardown_timesteps():
-            try:
-                yield from tqdm(timesteps)
-            finally:
-                clear()
 
         if sample_scheduler != None:
             if isinstance(sample_scheduler, FlowMatchScheduler) or sample_solver == 'unipc_hf':
@@ -1502,21 +1482,12 @@ class WanAny2V:
         torch.cuda.empty_cache()
         # denoising
         trans = self.model
-        dual_gpu_resident = (
-            self.model2 is None
-            and getattr(self.model, "num_layers", 0) == 40
-            and getattr(self.model, "dim", 0) == 5120
-            and torch.cuda.is_available()
-            and torch.cuda.device_count() >= 2
-        )
-        if dual_gpu_resident:
-            self.model.enable_dual_gpu_resident(split_index=20)
         if self_refiner_setting > 0:
             self_refiner_handler = create_self_refiner_handler(self_refiner_plan, self_refiner_f_uncertainty, self_refiner_setting, self_refiner_certain_percentage)
         else:
             self_refiner_handler = None
 
-        for i, t in enumerate(teardown_timesteps()):
+        for i, t in enumerate(tqdm(timesteps)):
             guide_scale, guidance_switch_done, trans, denoising_extra = update_guidance(i, t, guide_scale, guide2_scale, guidance_switch_done, switch_threshold, trans, 2, denoising_extra)
             guide_scale, guidance_switch2_done, trans, denoising_extra = update_guidance(i, t, guide_scale, guide3_scale, guidance_switch2_done, switch2_threshold, trans, 3, denoising_extra)
             offload.set_step_no_for_lora(trans, start_step_no + i)
@@ -1778,6 +1749,7 @@ class WanAny2V:
                 callback(i, latents_preview[0], False, denoising_extra =denoising_extra )
                 latents_preview = None
 
+        clear()
         if timestep_injection:
             latents[:, :, :source_latents.shape[2]] = source_latents
         if extended_overlapped_latents != None:
