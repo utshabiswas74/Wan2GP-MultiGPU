@@ -23,6 +23,6 @@
         "scail2_inject_ref_frames_in_video": "No"
     },
     "sliding_window_size": 149,
-    "sliding_window_overlap": 5,
+    "sliding_window_overlap": 7,
     "sliding_window_color_correction_strength": 0
 }
