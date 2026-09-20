@@ -1731,6 +1731,7 @@ class WanModel(ModelMixin, ConfigMixin):
         animate2_cached = animate2_cache is not None and len(animate2_cache.get("blocks", [])) == len(self.blocks)
         bernini_freqs_list = []
         bernini_output_slices = []
+        standin_e0 = None
 
         for i, (is_source, x, y, scail2_ref_mask, scail2_ref_latent) in enumerate(zip(is_source_x, x_list, y_list, scail2_ref_masks_list, scail2_ref_latents_list)):
             if is_source:
