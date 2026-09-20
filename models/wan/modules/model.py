@@ -993,6 +993,27 @@ class WanModel(ModelMixin, ConfigMixin):
                         moved_buffers[buffer_id] = buffer if buffer.device == device else buffer.to(device=device)
                     module._buffers[name] = moved_buffers[buffer_id]
                     visited_tensors.add(buffer_id)
+                for value in module.__dict__.values():
+                    cls._move_dual_gpu_quanto_storage(value, device, visited_tensors)
+
+    @staticmethod
+    def _move_dual_gpu_quanto_storage(value, device, visited):
+        value_id = id(value)
+        if value_id in visited:
+            return
+        visited.add(value_id)
+        data = getattr(value, "_data", None)
+        scale = getattr(value, "_scale", None)
+        if torch.is_tensor(data) and data.device != device:
+            value._data = data.to(device=device)
+        if torch.is_tensor(scale) and scale.device != device:
+            value._scale = scale.to(device=device)
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                WanModel._move_dual_gpu_quanto_storage(item, device, visited)
+        elif isinstance(value, dict):
+            for item in value.values():
+                WanModel._move_dual_gpu_quanto_storage(item, device, visited)
 
     @classmethod
     def _assert_dual_gpu_module_device(cls, root, device, label):
