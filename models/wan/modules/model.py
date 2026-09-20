@@ -607,6 +607,26 @@ class WanAttentionBlock(nn.Module):
             grid_sizes(Tensor): Shape [B, 3], the second dimension contains (F, H, W)
             freqs(Tensor): Rope freqs, shape [1024, C / num_heads / 2]
         """
+        resident_device = getattr(self, "_dual_gpu_resident_device", None)
+        if resident_device is not None:
+            WanModel._move_dual_gpu_module(self, resident_device)
+        mod_dev = self.modulation.weight.device
+        x = WanModel._move_dual_gpu_state(x, mod_dev)
+        e = WanModel._move_dual_gpu_state(e, mod_dev)
+        freqs = WanModel._move_dual_gpu_state(freqs, mod_dev)
+        context = WanModel._move_dual_gpu_state(context, mod_dev)
+        hints = WanModel._move_dual_gpu_state(hints, mod_dev)
+        cam_emb = WanModel._move_dual_gpu_state(cam_emb, mod_dev)
+        block_mask = WanModel._move_dual_gpu_state(block_mask, mod_dev)
+        audio_proj = WanModel._move_dual_gpu_state(audio_proj, mod_dev)
+        audio_context_lens = WanModel._move_dual_gpu_state(audio_context_lens, mod_dev)
+        audio_scale = WanModel._move_dual_gpu_state(audio_scale, mod_dev)
+        multitalk_audio = WanModel._move_dual_gpu_state(multitalk_audio, mod_dev)
+        multitalk_masks = WanModel._move_dual_gpu_state(multitalk_masks, mod_dev)
+        motion_vec = WanModel._move_dual_gpu_state(motion_vec, mod_dev)
+        lynx_ip_embeds = WanModel._move_dual_gpu_state(lynx_ip_embeds, mod_dev)
+        lynx_ref_buffer = WanModel._move_dual_gpu_state(lynx_ref_buffer, mod_dev)
+        animate2_generation = WanModel._move_dual_gpu_state(animate2_generation, mod_dev)
         if animate2_generation is not None:
             return animate2_cached_attention_block(self, x, e, grid_sizes, freqs, animate2_generation) if animate2_cached else animate2_attention_block(self, x, e, context, grid_sizes, freqs, animate2_generation)
 
@@ -911,6 +931,7 @@ class WanModel(ModelMixin, ConfigMixin):
                 self._assert_dual_gpu_module_device(module, self._dual_gpu_devices[0], "Wan auxiliary")
             for block_index, block in enumerate(self.blocks):
                 block_device = self._dual_gpu_devices[0 if block_index < split_index else 1]
+                block._dual_gpu_resident_device = block_device
                 self._move_dual_gpu_module(block, block_device)
                 self._assert_dual_gpu_module_device(block, block_device, f"Wan block {block_index}")
         except BaseException:
@@ -925,6 +946,8 @@ class WanModel(ModelMixin, ConfigMixin):
         try:
             for block in self.blocks:
                 self._move_dual_gpu_module(block, torch.device("cpu"))
+                if hasattr(block, "_dual_gpu_resident_device"):
+                    del block._dual_gpu_resident_device
         finally:
             self._restore_mmgp_hooks()
             self._dual_gpu_resident = False
@@ -960,13 +983,14 @@ class WanModel(ModelMixin, ConfigMixin):
                     if parameter is None or id(parameter) in visited_tensors:
                         continue
                     visited_tensors.add(id(parameter))
-                    parameter.data = parameter.data.to(device=device)
+                    if parameter.data.device != device:
+                        parameter.data = parameter.data.to(device=device)
                 for name, buffer in module._buffers.items():
                     if buffer is None:
                         continue
                     buffer_id = id(buffer)
                     if buffer_id not in moved_buffers:
-                        moved_buffers[buffer_id] = buffer.to(device=device)
+                        moved_buffers[buffer_id] = buffer if buffer.device == device else buffer.to(device=device)
                     module._buffers[name] = moved_buffers[buffer_id]
                     visited_tensors.add(buffer_id)
 
@@ -2273,6 +2297,11 @@ class WanModel(ModelMixin, ConfigMixin):
                 x = x[:, :real_seq]
 
             # head
+            head_device = self.head.head.weight.device
+            if x.device != head_device:
+                x = x.to(head_device)
+            if e.device != head_device:
+                e = e.to(head_device)
             x = self.head(x, e)
 
             # unpatchify
