@@ -1446,24 +1446,34 @@ class WanAny2V:
         callback(-1, None, True, override_num_inference_steps = updated_num_steps, denoising_extra = denoising_extra)
 
         def clear():
-            if sub_parallel_windows is not None:
-                if sub_parallel_cache is not None:
-                    sub_parallel_cache.previous_residual = None
-                    sub_parallel_cache.previous_modulated_input = None
-                self.model.cache = sub_parallel_cache
-                if self.model2 is not None:
-                    if sub_parallel_cache2 is not None:
-                        sub_parallel_cache2.previous_residual = None
-                        sub_parallel_cache2.previous_modulated_input = None
-                    self.model2.cache = sub_parallel_cache2
-            if hasattr(self.model, "disable_dual_gpu_resident"):
-                self.model.disable_dual_gpu_resident()
-            if self.model2 is not None and hasattr(self.model2, "disable_dual_gpu_resident"):
-                self.model2.disable_dual_gpu_resident()
-            clear_caches()
-            gc.collect()
-            torch.cuda.empty_cache()
+            try:
+                if sub_parallel_windows is not None:
+                    if sub_parallel_cache is not None:
+                        sub_parallel_cache.previous_residual = None
+                        sub_parallel_cache.previous_modulated_input = None
+                    self.model.cache = sub_parallel_cache
+                    if self.model2 is not None:
+                        if sub_parallel_cache2 is not None:
+                            sub_parallel_cache2.previous_residual = None
+                            sub_parallel_cache2.previous_modulated_input = None
+                        self.model2.cache = sub_parallel_cache2
+            finally:
+                try:
+                    if hasattr(self.model, "disable_dual_gpu_resident"):
+                        self.model.disable_dual_gpu_resident()
+                    if self.model2 is not None and hasattr(self.model2, "disable_dual_gpu_resident"):
+                        self.model2.disable_dual_gpu_resident()
+                finally:
+                    clear_caches()
+                    gc.collect()
+                    torch.cuda.empty_cache()
             return None
+
+        def teardown_timesteps():
+            try:
+                yield from tqdm(timesteps)
+            finally:
+                clear()
 
         if sample_scheduler != None:
             if isinstance(sample_scheduler, FlowMatchScheduler) or sample_solver == 'unipc_hf':
@@ -1500,7 +1510,7 @@ class WanAny2V:
         else:
             self_refiner_handler = None
 
-        for i, t in enumerate(tqdm(timesteps)):
+        for i, t in enumerate(teardown_timesteps()):
             guide_scale, guidance_switch_done, trans, denoising_extra = update_guidance(i, t, guide_scale, guide2_scale, guidance_switch_done, switch_threshold, trans, 2, denoising_extra)
             guide_scale, guidance_switch2_done, trans, denoising_extra = update_guidance(i, t, guide_scale, guide3_scale, guidance_switch2_done, switch2_threshold, trans, 3, denoising_extra)
             offload.set_step_no_for_lora(trans, start_step_no + i)
@@ -1762,7 +1772,6 @@ class WanAny2V:
                 callback(i, latents_preview[0], False, denoising_extra =denoising_extra )
                 latents_preview = None
 
-        clear()
         if timestep_injection:
             latents[:, :, :source_latents.shape[2]] = source_latents
         if extended_overlapped_latents != None:

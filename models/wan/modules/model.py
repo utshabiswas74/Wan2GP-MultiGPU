@@ -899,32 +899,74 @@ class WanModel(ModelMixin, ConfigMixin):
 
         self._dual_gpu_devices = (torch.device("cuda:0"), torch.device("cuda:1"))
         self._dual_gpu_split_index = split_index
+        self._dual_gpu_previous_layer = offload.shared_state.get("layer")
         self._dual_gpu_resident_modules = [
-            self.patch_embedding,
-            self.text_embedding,
-            self.time_embedding,
-            self.time_projection,
-            self.head,
+            module for name, module in self.named_children() if name != "blocks"
         ]
-        for module in self._dual_gpu_resident_modules:
-            module.to(self._dual_gpu_devices[0])
-        for block_index, block in enumerate(self.blocks):
-            block.to(self._dual_gpu_devices[0 if block_index < split_index else 1])
         self._dual_gpu_resident = True
-        offload.shared_state["_wan_dual_gpu_resident"] = True
+        try:
+            for module in self._dual_gpu_resident_modules:
+                module.to(self._dual_gpu_devices[0])
+                for parameter in module.parameters():
+                    if parameter.device != self._dual_gpu_devices[0]:
+                        raise RuntimeError("Wan auxiliary parameters must be resident on cuda:0")
+                for buffer in module.buffers():
+                    if buffer.device != self._dual_gpu_devices[0]:
+                        raise RuntimeError("Wan auxiliary buffers must be resident on cuda:0")
+            for block_index, block in enumerate(self.blocks):
+                block_device = self._dual_gpu_devices[0 if block_index < split_index else 1]
+                block.to(block_device)
+                for parameter in block.parameters():
+                    if parameter.device != block_device:
+                        raise RuntimeError(f"Wan block {block_index} parameter was not moved to {block_device}")
+                for buffer in block.buffers():
+                    if buffer.device != block_device:
+                        raise RuntimeError(f"Wan block {block_index} buffer was not moved to {block_device}")
+            self._suspend_mmgp_hooks()
+        except BaseException:
+            try:
+                self.disable_dual_gpu_resident()
+            finally:
+                raise
 
     def disable_dual_gpu_resident(self):
         if not getattr(self, "_dual_gpu_resident", False):
             return
-        for block in self.blocks:
-            block.to("cpu")
-        for module in getattr(self, "_dual_gpu_resident_modules", []):
-            module.to("cpu")
-        self._dual_gpu_resident = False
-        offload.shared_state.pop("_wan_dual_gpu_resident", None)
-        for device_index in (0, 1):
-            torch.cuda.synchronize(device_index)
-        torch.cuda.empty_cache()
+        try:
+            for block in self.blocks:
+                block.to("cpu")
+        finally:
+            self._restore_mmgp_hooks()
+            self._dual_gpu_resident = False
+            if self._dual_gpu_previous_layer is None:
+                offload.shared_state.pop("layer", None)
+            else:
+                offload.shared_state["layer"] = self._dual_gpu_previous_layer
+            self._dual_gpu_previous_layer = None
+            for device_index in (0, 1):
+                torch.cuda.synchronize(device_index)
+            torch.cuda.empty_cache()
+
+    def _suspend_mmgp_hooks(self):
+        self._dual_gpu_mmgp_hooks = []
+        hook_names = ("_forward_pre_hooks", "_forward_hooks", "_forward_hooks_with_kwargs")
+        for module in self.modules():
+            for hook_name in hook_names:
+                hooks = getattr(module, hook_name, None)
+                if hooks is None:
+                    continue
+                for hook_id, hook in list(hooks.items()):
+                    hook_module = getattr(hook, "__module__", "") or type(hook).__module__
+                    hook_name = getattr(hook, "__name__", "") or type(hook).__name__
+                    hook_identity = f"{hook_module}.{hook_name}".lower()
+                    if hook_module.startswith("mmgp") and "lora" not in hook_identity:
+                        self._dual_gpu_mmgp_hooks.append((hooks, hook_id, hook))
+                        del hooks[hook_id]
+
+    def _restore_mmgp_hooks(self):
+        for hooks, hook_id, hook in getattr(self, "_dual_gpu_mmgp_hooks", []):
+            hooks[hook_id] = hook
+        self._dual_gpu_mmgp_hooks = []
 
     @staticmethod
     def _move_dual_gpu_state(value, device):
