@@ -11,7 +11,7 @@
     },
     "prompt": "The character is dancing naturally with expressive body movement",
     "negative_prompt": "",
-    "video_length": 149,
+    "video_length": 150,
     "resolution": "320x576",
     "num_inference_steps": 10,
     "force_fps": "15",
@@ -22,7 +22,7 @@
         "image_ref_keyword_content": "human character",
         "scail2_inject_ref_frames_in_video": "No"
     },
-    "sliding_window_size": 37,
-    "sliding_window_overlap": 7,
+    "sliding_window_size": 150,
+    "sliding_window_overlap": 5,
     "sliding_window_color_correction_strength": 0
 }
